@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-18 — PR #4: Promote dev to main: Discord notifications
+
+- Add Discord notifications: PR opened, CI failure, merge failure (#3) (29bd48d)
+
+
 ## 2026-10-18 — PR #2: Add changelog automation + PR session traceability
 
 - Add CHANGELOG automation, PR template with session traceability (537d79c)
