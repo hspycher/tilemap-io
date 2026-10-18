@@ -1,0 +1,78 @@
+name: Deploy to AWS (S3 + CloudFront)
+
+# Production deploy on push to main (released code), preview deploy on push
+# to dev (working integration branch) — lets you see dev changes live before
+# they're promoted. Runs its own test+build rather than trusting that
+# whatever landed on the branch was already verified, since dev accepts
+# direct pushes (not just PRs).
+
+on:
+  push:
+    branches: [main, dev]
+
+permissions:
+  id-token: write   # required for OIDC -> AWS role assumption
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+
+      - name: Pick environment for this branch
+        id: env
+        run: |
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            echo "bucket=${{ vars.S3_BUCKET_PROD }}" >> "$GITHUB_OUTPUT"
+            echo "distribution=${{ vars.CLOUDFRONT_DIST_PROD }}" >> "$GITHUB_OUTPUT"
+            echo "label=production" >> "$GITHUB_OUTPUT"
+          else
+            echo "bucket=${{ vars.S3_BUCKET_PREVIEW }}" >> "$GITHUB_OUTPUT"
+            echo "distribution=${{ vars.CLOUDFRONT_DIST_PREVIEW }}" >> "$GITHUB_OUTPUT"
+            echo "label=preview" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Configure AWS credentials (OIDC, no stored keys)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Sync build to S3
+        run: |
+          aws s3 sync dist/ "s3://${{ steps.env.outputs.bucket }}" --delete
+
+      - name: Invalidate CloudFront cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id "${{ steps.env.outputs.distribution }}" \
+            --paths "/*"
+
+      - name: Notify Discord
+        if: always()
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          if [ -z "$DISCORD_WEBHOOK_URL" ]; then
+            exit 0
+          fi
+          if [ "${{ job.status }}" = "success" ]; then
+            TITLE="🚀 Deployed to ${{ steps.env.outputs.label }}"
+            COLOR=3066993
+          else
+            TITLE="❌ Deploy to ${{ steps.env.outputs.label }} failed"
+            COLOR=15158332
+          fi
+          curl -s -X POST -H "Content-Type: application/json" \
+            -d "{\"embeds\":[{\"title\":\"${TITLE}\",\"url\":\"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\",\"color\":${COLOR},\"description\":\"Branch **${{ github.ref_name }}**\"}]}" \
+            "$DISCORD_WEBHOOK_URL"
