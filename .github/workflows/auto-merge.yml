@@ -16,7 +16,11 @@ jobs:
     steps:
       - name: Find and merge the open PR for this branch (dev target only)
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Personal token, NOT secrets.GITHUB_TOKEN — a merge performed with
+          # GITHUB_TOKEN doesn't trigger downstream push-triggered workflows
+          # (GitHub's loop prevention), which would silently stop deploy.yml
+          # (push-only trigger) from ever firing after an auto-merge.
+          GH_TOKEN: ${{ secrets.PERSONAL_GH_TOKEN }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           REPO: ${{ github.repository }}
           HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
