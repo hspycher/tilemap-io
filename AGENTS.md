@@ -46,6 +46,19 @@ review step** in between. This means:
 - A failing/red CI run simply never merges — the PR sits open. That's the
   intended failure mode; don't force-merge around it.
 
+## Traceability
+
+- **Every PR uses `.github/PULL_REQUEST_TEMPLATE.md`**, which has a
+  "Hermes session ID" field. If you're an AI agent (subagent, delegated
+  task, local model), fill it in with `echo $HERMES_SESSION_ID` before
+  opening the PR — this is what lets anyone trace a shipped change back to
+  the full reasoning/tool-call transcript that produced it, not just the
+  diff.
+- **`CHANGELOG.md` is auto-generated** on every `dev` → `main` promotion PR
+  (`.github/workflows/changelog.yml`) — don't hand-edit it; it's derived
+  from commit messages, which is another reason commit messages need to be
+  real sentences describing the actual change, not "wip" or "fix".
+
 ## Known state (update this section as the project evolves)
 
 - Board is a fixed 8x8 grid, pieces move one orthogonal or diagonal tile at a
