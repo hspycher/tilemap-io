@@ -63,10 +63,22 @@ export class TileGrid {
     return true;
   }
 
-  /** Orthogonal neighbors only (no diagonals) — the only legal move shape for now. */
+  /** Orthogonal neighbors only (no diagonals) — the original legal move shape. */
   isAdjacent(a: GridPos, b: GridPos): boolean {
     const dCol = Math.abs(a.col - b.col);
     const dRow = Math.abs(a.row - b.row);
     return (dCol === 1 && dRow === 0) || (dCol === 0 && dRow === 1);
+  }
+
+  /** Diagonal neighbors only (the 4 diagonal tiles one step away). */
+  isAdjacentDiagonal(a: GridPos, b: GridPos): boolean {
+    const dCol = Math.abs(a.col - b.col);
+    const dRow = Math.abs(a.row - b.row);
+    return dCol === 1 && dRow === 1;
+  }
+
+  /** Any of the 8 surrounding tiles — orthogonal or diagonal, one step away. */
+  isAdjacentAny(a: GridPos, b: GridPos): boolean {
+    return this.isAdjacent(a, b) || this.isAdjacentDiagonal(a, b);
   }
 }

@@ -91,7 +91,7 @@ class MainScene extends Phaser.Scene {
       return;
     }
 
-    if (this.grid.isAdjacent(selected.pos, clicked) && this.grid.movePiece(this.selectedId, clicked)) {
+    if (this.grid.isAdjacentAny(selected.pos, clicked) && this.grid.movePiece(this.selectedId, clicked)) {
       const sprite = this.pieceSprites.get(this.selectedId)!;
       this.tweens.add({
         targets: sprite,
