@@ -1,0 +1,50 @@
+name: Discord notify — PR opened
+
+on:
+  pull_request:
+    types: [opened]
+    branches: [main, dev]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post to Discord
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: |
+          if [ -z "$DISCORD_WEBHOOK_URL" ]; then
+            echo "No DISCORD_WEBHOOK_URL secret set, skipping."
+            exit 0
+          fi
+
+          AUTO_NOTE=""
+          if [ "$BASE_REF" = "dev" ]; then
+            AUTO_NOTE=" (will auto-merge if CI passes)"
+          else
+            AUTO_NOTE=" (requires manual merge — targets protected main)"
+          fi
+          export AUTO_NOTE
+
+          PAYLOAD=$(python3 - <<PYEOF
+          import json, os
+          print(json.dumps({
+              "embeds": [{
+                  "title": f"📬 New PR #{os.environ['PR_NUMBER']}: {os.environ['PR_TITLE']}",
+                  "url": os.environ['PR_URL'],
+                  "color": 3447003,
+                  "description": f"**{os.environ['HEAD_REF']}** → **{os.environ['BASE_REF']}**{os.environ.get('AUTO_NOTE','')}",
+                  "footer": {"text": f"Opened by {os.environ['PR_AUTHOR']}"}
+              }]
+          }))
+          PYEOF
+          )
+
+          curl -s -X POST -H "Content-Type: application/json" \
+            -d "$PAYLOAD" "$DISCORD_WEBHOOK_URL"
