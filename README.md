@@ -33,3 +33,5 @@ npm run build    # typecheck + production build to dist/
 - [x] Unit tests for move legality
 - [ ] Deployment pipeline (not wired up yet)
 - [ ] Actual game rules (this is just the movement substrate)
+
+<!-- deploy pipeline verification commit -->

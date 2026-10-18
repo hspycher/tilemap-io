@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-18 — PR #8: Promote dev to main: Discord notifications + automated AWS deploy
+
+- Document AWS deployment setup, OIDC gotcha, and token-type lesson in AGENTS.md (cef3c46)
+- test: verify deploy triggers correctly after auto-merge fix (#7) (28e91e7)
+- Fix auto-merge: use personal token so post-merge push events actually trigger (deploy was silently never firing) (#6) (10748e5)
+- Add automated deploy to AWS S3+CloudFront (prod on main, preview on dev) (#5) (6ae9c9d)
+
+
 ## 2026-10-18 — PR #4: Promote dev to main: Discord notifications
 
 - Add Discord notifications: PR opened, CI failure, merge failure (#3) (29bd48d)

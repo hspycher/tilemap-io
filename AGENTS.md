@@ -59,10 +59,34 @@ review step** in between. This means:
   from commit messages, which is another reason commit messages need to be
   real sentences describing the actual change, not "wip" or "fix".
 
+## Deployment
+
+- `dev` pushes deploy to the **preview** environment, `main` pushes deploy
+  to **production** — see `.github/workflows/deploy.yml`.
+- Infra: S3 (private, OAC-gated — never public) + CloudFront, in AWS account
+  803872155074, region us-west-2. Auth is GitHub OIDC → a scoped IAM role
+  (`tilemap-io-github-deploy`) — no long-lived AWS keys anywhere.
+- **GOTCHA (burned real time once, don't repeat it):** this GitHub org's
+  OIDC subject claim format is NOT the usual `repo:OWNER/REPO:ref:refs/heads/BRANCH`.
+  It's `repo:OWNER@USER_ID/REPO@REPO_ID:ref:refs/heads/BRANCH` (confirmed via
+  CloudTrail `userIdentity.principalId` on a rejected AssumeRoleWithWebIdentity
+  call — GitHub's own generic docs don't mention this variant). If you ever
+  need to touch the IAM role's trust policy again, verify the REAL subject
+  via CloudTrail rather than assuming the standard format — a `StringLike`
+  wildcard on the wrong format fails silently with a generic "Not authorized"
+  error that gives no hint the pattern itself is wrong.
+- Also learned here: `auto-merge.yml` and `changelog.yml` MUST merge/push
+  using a personal token (`secrets.PERSONAL_GH_TOKEN`), never
+  `secrets.GITHUB_TOKEN` — GitHub's loop-prevention means GITHUB_TOKEN-authored
+  pushes never trigger downstream `push`-triggered workflows (like this
+  deploy workflow), which fails *silently* (no error anywhere, it just never
+  runs) and is easy to miss without actively checking for the expected run.
+
 ## Known state (update this section as the project evolves)
 
 - Board is a fixed 8x8 grid, pieces move one orthogonal or diagonal tile at a
   time to an empty tile only (no captures, no multi-tile moves yet).
 - CI (test + build) runs on every push/PR; green CI auto-merges the PR.
-- No deployment pipeline configured yet.
+- Deployed: preview (dev) at https://d23r2fvbfqt1xo.cloudfront.net/,
+  production (main) deploys to its own CloudFront URL once promoted.
 - No game rules beyond movement — this is a substrate, not a finished game.
