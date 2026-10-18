@@ -17,9 +17,24 @@ this repo. Read this before making changes.
 - **Commit messages:** short imperative summary line (`Add diagonal move
   support`, not `Added` or `Adding`).
 
-## PRs auto-merge on green CI — CI is the real safety gate
+## Branch policy
 
-Any PR opened against `main` auto-merges (squash) the moment its CI run
+- `main` is **protected**: no direct pushes, requires a pull request, and
+  requires green CI. Nobody (human or agent) pushes to `main` directly.
+- `dev` is the working integration branch. Agents branch feature work off
+  `dev` (`git checkout -b feature/x dev`) and open PRs **against `dev`**,
+  not `main`.
+- PRs targeting `dev` auto-merge (squash) the moment CI goes green — see
+  `.github/workflows/auto-merge.yml`. This is the "CI is the safety gate"
+  trade-off described below.
+- PRs targeting `main` (i.e. promoting `dev` → `main`) do **not**
+  auto-merge, even on green CI — those are reviewed and merged by a human
+  only. This is the deliberate human checkpoint before anything ships to
+  the protected branch.
+
+## PRs auto-merge into dev on green CI — CI is the real safety gate
+
+Any PR opened against `dev` auto-merges (squash) the moment its CI run
 succeeds — see `.github/workflows/auto-merge.yml`. There is **no human
 review step** in between. This means:
 
