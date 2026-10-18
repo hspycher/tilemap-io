@@ -1,0 +1,52 @@
+name: Auto-merge on green CI
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  automerge:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Find and merge the open PR for this branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          # Never auto-merge CI runs against main itself (nothing to merge),
+          # only runs that happened on a feature branch with an open PR.
+          if [ "$HEAD_BRANCH" = "main" ]; then
+            echo "CI ran on main directly, nothing to merge."
+            exit 0
+          fi
+
+          PR_NUMBER=$(curl -s -H "Authorization: token $GH_TOKEN" \
+            "https://api.github.com/repos/${REPO}/pulls?head=${OWNER}:${HEAD_BRANCH}&state=open" \
+            | python3 -c "import json,sys; d=json.load(sys.stdin); print(d[0]['number'] if d else '')")
+
+          if [ -z "$PR_NUMBER" ]; then
+            echo "No open PR found for branch ${HEAD_BRANCH}; nothing to merge."
+            exit 0
+          fi
+
+          echo "Merging PR #${PR_NUMBER} (CI passed on ${HEAD_BRANCH})"
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X PUT \
+            -H "Authorization: token $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${REPO}/pulls/${PR_NUMBER}/merge" \
+            -d '{"merge_method":"squash"}')
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          echo "$BODY"
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "Merge failed with HTTP $HTTP_CODE"
+            exit 1
+          fi

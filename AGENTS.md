@@ -17,9 +17,24 @@ this repo. Read this before making changes.
 - **Commit messages:** short imperative summary line (`Add diagonal move
   support`, not `Added` or `Adding`).
 
+## PRs auto-merge on green CI — CI is the real safety gate
+
+Any PR opened against `main` auto-merges (squash) the moment its CI run
+succeeds — see `.github/workflows/auto-merge.yml`. There is **no human
+review step** in between. This means:
+
+- **Do not rely on "someone will catch it in review."** If a test doesn't
+  exist for a behavior, that behavior is NOT verified before it ships to
+  main — write the test.
+- **Never weaken or skip a test to make CI pass.** That directly defeats the
+  only gate standing between a broken change and main.
+- A failing/red CI run simply never merges — the PR sits open. That's the
+  intended failure mode; don't force-merge around it.
+
 ## Known state (update this section as the project evolves)
 
-- Board is a fixed 8x8 grid, pieces move one orthogonal tile at a time to an
-  empty tile only (no captures, no diagonals, no multi-tile moves yet).
+- Board is a fixed 8x8 grid, pieces move one orthogonal or diagonal tile at a
+  time to an empty tile only (no captures, no multi-tile moves yet).
+- CI (test + build) runs on every push/PR; green CI auto-merges the PR.
 - No deployment pipeline configured yet.
 - No game rules beyond movement — this is a substrate, not a finished game.
