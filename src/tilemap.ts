@@ -53,6 +53,11 @@ export class TileGrid {
     return [...this.pieces.values()];
   }
 
+  /** Removes every piece from the grid, leaving all tiles empty. */
+  clear(): void {
+    this.pieces.clear();
+  }
+
   /** Returns true and moves the piece if the move is legal; false otherwise. */
   movePiece(id: string, to: GridPos): boolean {
     const piece = this.pieces.get(id);
