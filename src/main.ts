@@ -8,6 +8,13 @@ const GRID_ROWS = 8;
 
 const PIECE_COLORS = [0xe74c3c, 0x3498db, 0xf1c40f, 0x2ecc71];
 
+const STARTING_POSITIONS: GridPos[] = [
+  { col: 1, row: 1 },
+  { col: 6, row: 1 },
+  { col: 1, row: 6 },
+  { col: 6, row: 6 },
+];
+
 function colToX(col: number): number {
   return col * TILE_SIZE + TILE_SIZE / 2;
 }
@@ -49,13 +56,7 @@ class MainScene extends Phaser.Scene {
   }
 
   private spawnPieces(): void {
-    const starts: GridPos[] = [
-      { col: 1, row: 1 },
-      { col: 6, row: 1 },
-      { col: 1, row: 6 },
-      { col: 6, row: 6 },
-    ];
-    starts.forEach((pos, i) => {
+    STARTING_POSITIONS.forEach((pos, i) => {
       const id = `piece-${i}`;
       this.grid.addPiece({ id, pos });
       const sprite = this.add.circle(
@@ -120,13 +121,30 @@ class MainScene extends Phaser.Scene {
     this.selectedId = null;
     this.selectionRing?.setVisible(false);
   }
+
+  /** Clears the board and re-spawns all pieces at their original starting layout. */
+  resetBoard(): void {
+    this.clearSelection();
+    for (const sprite of this.pieceSprites.values()) {
+      sprite.destroy();
+    }
+    this.pieceSprites.clear();
+    this.grid.clear();
+    this.spawnPieces();
+  }
 }
 
-new Phaser.Game({
+const game = new Phaser.Game({
   type: Phaser.AUTO,
   parent: "app",
   width: GRID_COLS * TILE_SIZE,
   height: GRID_ROWS * TILE_SIZE,
   backgroundColor: "#1a1a2e",
   scene: [MainScene],
+});
+
+const resetButton = document.getElementById("reset-button");
+resetButton?.addEventListener("click", () => {
+  const scene = game.scene.getScene("main") as MainScene;
+  scene.resetBoard();
 });

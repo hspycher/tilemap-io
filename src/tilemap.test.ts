@@ -93,4 +93,20 @@ describe("TileGrid", () => {
     expect(grid.pieceAt({ col: 3, row: 3 })?.id).toBe("p1");
     expect(grid.pieceAt({ col: 0, row: 0 })).toBeUndefined();
   });
+
+  it("clear removes every piece from the grid", () => {
+    grid.addPiece({ id: "p1", pos: { col: 1, row: 1 } });
+    grid.addPiece({ id: "p2", pos: { col: 2, row: 2 } });
+    grid.clear();
+    expect(grid.allPieces()).toEqual([]);
+    expect(grid.getPiece("p1")).toBeUndefined();
+    expect(grid.pieceAt({ col: 1, row: 1 })).toBeUndefined();
+  });
+
+  it("allows re-adding pieces at their original spots after clear", () => {
+    grid.addPiece({ id: "p1", pos: { col: 1, row: 1 } });
+    grid.clear();
+    expect(() => grid.addPiece({ id: "p1", pos: { col: 1, row: 1 } })).not.toThrow();
+    expect(grid.getPiece("p1")?.pos).toEqual({ col: 1, row: 1 });
+  });
 });
