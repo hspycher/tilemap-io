@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-10-19 — PR #10: Promote dev to main: live game URL in Discord deploy notifications
+
+- Include live game URL in Discord deploy notifications (#9) (e7b299c)
+- docs: update CHANGELOG.md for PR #8 (917d3a6)
+- Document AWS deployment setup, OIDC gotcha, and token-type lesson in AGENTS.md (cef3c46)
+- test: verify deploy triggers correctly after auto-merge fix (#7) (28e91e7)
+- Fix auto-merge: use personal token so post-merge push events actually trigger (deploy was silently never firing) (#6) (10748e5)
+- Add automated deploy to AWS S3+CloudFront (prod on main, preview on dev) (#5) (6ae9c9d)
+
+
 ## 2026-10-18 — PR #8: Promote dev to main: Discord notifications + automated AWS deploy
 
 - Document AWS deployment setup, OIDC gotcha, and token-type lesson in AGENTS.md (cef3c46)

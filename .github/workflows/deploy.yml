@@ -36,10 +36,12 @@ jobs:
             echo "bucket=${{ vars.S3_BUCKET_PROD }}" >> "$GITHUB_OUTPUT"
             echo "distribution=${{ vars.CLOUDFRONT_DIST_PROD }}" >> "$GITHUB_OUTPUT"
             echo "label=production" >> "$GITHUB_OUTPUT"
+            echo "url=${{ vars.CLOUDFRONT_URL_PROD }}" >> "$GITHUB_OUTPUT"
           else
             echo "bucket=${{ vars.S3_BUCKET_PREVIEW }}" >> "$GITHUB_OUTPUT"
             echo "distribution=${{ vars.CLOUDFRONT_DIST_PREVIEW }}" >> "$GITHUB_OUTPUT"
             echo "label=preview" >> "$GITHUB_OUTPUT"
+            echo "url=${{ vars.CLOUDFRONT_URL_PREVIEW }}" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Configure AWS credentials (OIDC, no stored keys)
@@ -66,13 +68,17 @@ jobs:
           if [ -z "$DISCORD_WEBHOOK_URL" ]; then
             exit 0
           fi
+          GAME_URL="${{ steps.env.outputs.url }}"
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           if [ "${{ job.status }}" = "success" ]; then
             TITLE="🚀 Deployed to ${{ steps.env.outputs.label }}"
             COLOR=3066993
+            DESC="Branch **${{ github.ref_name }}**\n🔗 [Play it here](${GAME_URL})"
           else
             TITLE="❌ Deploy to ${{ steps.env.outputs.label }} failed"
             COLOR=15158332
+            DESC="Branch **${{ github.ref_name }}**\n(last successful deploy, if any, is still live: ${GAME_URL})"
           fi
           curl -s -X POST -H "Content-Type: application/json" \
-            -d "{\"embeds\":[{\"title\":\"${TITLE}\",\"url\":\"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\",\"color\":${COLOR},\"description\":\"Branch **${{ github.ref_name }}**\"}]}" \
+            -d "{\"embeds\":[{\"title\":\"${TITLE}\",\"url\":\"${RUN_URL}\",\"color\":${COLOR},\"description\":\"${DESC}\"}]}" \
             "$DISCORD_WEBHOOK_URL"
