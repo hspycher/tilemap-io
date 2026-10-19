@@ -109,4 +109,43 @@ describe("TileGrid", () => {
     expect(() => grid.addPiece({ id: "p1", pos: { col: 1, row: 1 } })).not.toThrow();
     expect(grid.getPiece("p1")?.pos).toEqual({ col: 1, row: 1 });
   });
+
+  it("starts with a move count of zero", () => {
+    expect(grid.moveCount).toBe(0);
+  });
+
+  it("increments moveCount on every successful move", () => {
+    grid.addPiece({ id: "p1", pos: { col: 0, row: 0 } });
+    grid.movePiece("p1", { col: 1, row: 0 });
+    expect(grid.moveCount).toBe(1);
+    grid.movePiece("p1", { col: 1, row: 1 });
+    expect(grid.moveCount).toBe(2);
+  });
+
+  it("does not increment moveCount on a failed move", () => {
+    grid.addPiece({ id: "p1", pos: { col: 0, row: 0 } });
+    grid.addPiece({ id: "p2", pos: { col: 1, row: 0 } });
+    const moved = grid.movePiece("p1", { col: 1, row: 0 }); // occupied
+    expect(moved).toBe(false);
+    expect(grid.moveCount).toBe(0);
+    expect(grid.movePiece("ghost", { col: 2, row: 2 })).toBe(false);
+    expect(grid.moveCount).toBe(0);
+  });
+
+  it("resetMoveCount zeroes the counter without affecting piece positions", () => {
+    grid.addPiece({ id: "p1", pos: { col: 0, row: 0 } });
+    grid.movePiece("p1", { col: 1, row: 0 });
+    expect(grid.moveCount).toBe(1);
+    grid.resetMoveCount();
+    expect(grid.moveCount).toBe(0);
+    expect(grid.getPiece("p1")?.pos).toEqual({ col: 1, row: 0 });
+  });
+
+  it("resetBoard clears pieces and the move counter together", () => {
+    grid.addPiece({ id: "p1", pos: { col: 0, row: 0 } });
+    grid.movePiece("p1", { col: 1, row: 0 });
+    grid.resetBoard();
+    expect(grid.moveCount).toBe(0);
+    expect(grid.allPieces()).toEqual([]);
+  });
 });

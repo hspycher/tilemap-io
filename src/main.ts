@@ -25,6 +25,8 @@ function pixelToGrid(x: number, y: number): GridPos {
   return { col: Math.floor(x / TILE_SIZE), row: Math.floor(y / TILE_SIZE) };
 }
 
+const moveCounterEl = document.getElementById("move-counter");
+
 class MainScene extends Phaser.Scene {
   private grid = new TileGrid(GRID_COLS, GRID_ROWS);
   private pieceSprites = new Map<string, Phaser.GameObjects.Arc>();
@@ -38,10 +40,15 @@ class MainScene extends Phaser.Scene {
   create(): void {
     this.drawBoard();
     this.spawnPieces();
+    this.updateMoveCounterDisplay();
 
     this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
       this.handleClick(pointer.x, pointer.y);
     });
+  }
+
+  private updateMoveCounterDisplay(): void {
+    if (moveCounterEl) moveCounterEl.textContent = `Moves: ${this.grid.moveCount}`;
   }
 
   private drawBoard(): void {
@@ -101,6 +108,7 @@ class MainScene extends Phaser.Scene {
         duration: 150,
         ease: "Quad.easeOut",
       });
+      this.updateMoveCounterDisplay();
     }
     this.clearSelection();
   }
@@ -129,8 +137,9 @@ class MainScene extends Phaser.Scene {
       sprite.destroy();
     }
     this.pieceSprites.clear();
-    this.grid.clear();
+    this.grid.resetBoard();
     this.spawnPieces();
+    this.updateMoveCounterDisplay();
   }
 }
 
