@@ -24,7 +24,7 @@ jobs:
       # excluded from re-triggering workflows (GitHub's loop prevention),
       # which would otherwise leave the branch permanently one unchecked
       # commit ahead of what CI validated and block the merge.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
