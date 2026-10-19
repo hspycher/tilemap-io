@@ -15,6 +15,7 @@ export class TileGrid {
   readonly cols: number;
   readonly rows: number;
   private pieces: Map<string, Piece> = new Map();
+  private _moveCount = 0;
 
   constructor(cols: number, rows: number) {
     if (cols <= 0 || rows <= 0) {
@@ -22,6 +23,16 @@ export class TileGrid {
     }
     this.cols = cols;
     this.rows = rows;
+  }
+
+  /** Number of successful movePiece calls since the grid was created or last reset. */
+  get moveCount(): number {
+    return this._moveCount;
+  }
+
+  /** Resets the move counter to zero without touching piece positions. */
+  resetMoveCount(): void {
+    this._moveCount = 0;
   }
 
   isInBounds(pos: GridPos): boolean {
@@ -58,6 +69,12 @@ export class TileGrid {
     this.pieces.clear();
   }
 
+  /** Removes every piece and resets the move counter — a full board reset. */
+  resetBoard(): void {
+    this.clear();
+    this.resetMoveCount();
+  }
+
   /** Returns true and moves the piece if the move is legal; false otherwise. */
   movePiece(id: string, to: GridPos): boolean {
     const piece = this.pieces.get(id);
@@ -65,6 +82,7 @@ export class TileGrid {
     if (!this.isInBounds(to)) return false;
     if (this.pieceAt(to)) return false; // occupied — no stacking/capture yet
     piece.pos = to;
+    this._moveCount++;
     return true;
   }
 
