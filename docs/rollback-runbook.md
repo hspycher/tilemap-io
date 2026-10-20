@@ -64,49 +64,37 @@ merges the promotion PR — not an emergency-response timescale.
 
 ## 3. Path B — emergency direct S3 restore (bypasses CI)
 
-**Status as of 2026-10-20 (verified via `aws s3api get-bucket-versioning`,
-not assumed): S3 versioning is NOT enabled on either the prod bucket
-(`tilemap-io-prod-803872155074`) or the preview bucket.** `aws s3api
-get-bucket-versioning` returns an empty response (no `Status` field) for
-both — this is the AWS CLI's way of saying versioning was never turned on.
+**Status as of 2026-10-20 (updated): S3 versioning is now ENABLED on both
+buckets** (`tilemap-io-prod-803872155074` and `tilemap-io-preview-803872155074`),
+confirmed via `aws s3api get-bucket-versioning` returning `{"Status": "Enabled"}`
+for both. A 30-day `NoncurrentVersionExpiration` lifecycle rule is attached to
+both buckets (rule ID `expire-noncurrent-versions-30d`) to bound storage cost --
+old versions are permanently deleted 30 days after becoming noncurrent, not
+kept forever.
 
-### What this means in practice
+**Path B below is now real and verified, not theoretical.** A full practice
+drill was run on the preview bucket: pushed a trivial change, confirmed two
+versions of `index.html` existed after the sync (not a hard-delete), restored
+the prior version via `copy-object` (confirmed content reverted), restored the
+real current version back on top (confirmed content returned), and invalidated
+CloudFront -- the exact procedure in this section, exercised for real, not
+assumed to work because it's documented.
 
-- `aws s3 sync --delete` is a one-way street right now. Once a bad deploy's
-  `sync` runs, the previous build's objects are gone from the bucket with
-  **no built-in way to list or restore a prior object version** —
-  `aws s3api list-object-versions` will only ever show the single current
-  version of each key.
-- The only way to "restore" the previous build today is to **rebuild it from
-  git and redeploy it** — i.e., there is no faster-than-CI emergency path
-  available right now. Path A (revert PR) *is* the fastest available option
-  until versioning is turned on.
 
-### Gap + recommendation (not acted on — Henry's call)
+### What this means in practice (resolved 2026-10-20 -- Henry's call: enable it)
 
-This is a real gap for an emergency where the promotion-PR human-merge delay
-in Path A is unacceptable (e.g. prod is actively broken for users). The fix
-is to **enable S3 bucket versioning** on the prod bucket (and optionally
-preview). This is an infra change with real implications, so it is
-*recommended, not applied*:
+- `aws s3 sync --delete` now creates delete markers instead of hard-deleting,
+  so a prior object version is always recoverable via `copy-object` (see
+  the procedure below) -- `aws s3api list-object-versions` shows the full
+  history of each key, not just the current version.
+- Versioning + the 30-day `NoncurrentVersionExpiration` lifecycle rule are
+  live on both buckets. Storage cost is bounded to roughly a month's worth
+  of superseded builds -- negligible for a small static site.
+- Path A (revert PR) is still the normal/default path -- Path B below is
+  the emergency option when the promotion-PR merge delay is unacceptable.
 
-- Versioning has a modest storage-cost impact: every `sync --delete` would
-  retain old object versions instead of deleting them, so storage grows
-  over time unless paired with a lifecycle rule that expires noncurrent
-  versions after N days.
-- `--delete` in the sync step would then create delete markers instead of
-  hard-deleting, which is exactly what you want for rollback but changes
-  what "the bucket" means operationally (current objects vs. all versions).
-- Decision needed from Henry: enable versioning + add a lifecycle rule
-  (e.g. expire noncurrent versions after 30 days) to bound the cost. Until
-  then, treat Path A as the only rollback path and plan emergency response
-  time accordingly.
+### Emergency procedure (verified working, see status above)
 
-### If/when versioning IS enabled, here is the emergency procedure
-
-(Not usable today — documented now so it's ready the moment Henry turns
-versioning on. Verify versioning is actually "Enabled" first — see §4 —
-before trusting this path.)
 
 1. List versions of everything currently in the bucket, newest first:
    ```
