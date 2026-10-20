@@ -48,6 +48,7 @@ jobs:
           # via env, never interpolated directly into the script body --
           # a title like `"; rm -rf . #` would otherwise execute as shell.
           PR_TITLE: ${{ github.event.pull_request.title }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
         run: |
           git fetch origin main
           DATE=$(date -u +%Y-%m-%d)
@@ -88,5 +89,5 @@ jobs:
             echo "No changelog changes to commit."
           else
             git commit -m "docs: update CHANGELOG.md for PR #${PR_NUM}"
-            git push origin HEAD:${{ github.event.pull_request.head.ref }}
+            git push origin "HEAD:${HEAD_REF}"
           fi
