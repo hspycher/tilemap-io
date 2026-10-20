@@ -37,3 +37,5 @@ npm run build    # typecheck + production build to dist/
 <!-- deploy pipeline verification commit -->
 
 See AGENTS.md for repo conventions.
+
+Deploy pipeline: GitHub Actions -> S3 -> CloudFront.
