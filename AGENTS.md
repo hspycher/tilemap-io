@@ -50,10 +50,28 @@ pass, webhook-triggered on PR open/update -- see `.github/workflows/`,
   open. That's the intended failure mode; don't force-merge around it.
 - `ai-review`'s credential is deliberately narrower than everything else in
   this pipeline -- it can read PRs and post commit statuses, nothing else
-  (verified merge-incapable and PR-comment-incapable). Actual merge
-  authority lives only in `secrets.PERSONAL_GH_TOKEN` inside GitHub Actions,
-  never on a local machine. Don't "fix" review-token limitations by handing
-  it broader scope -- that defeats the reason it's separate.
+  (verified merge-incapable and PR-comment-incapable). Don't "fix"
+  review-token limitations by handing it broader scope -- that defeats the
+  reason it's separate.
+- Merge + changelog-push authority inside GitHub Actions lives in the
+  **`tilemap-io-ci` GitHub App** (repo-scoped to just this repo, Contents +
+  Pull requests write only), not a personal token -- `secrets.PERSONAL_GH_TOKEN`
+  was retired once the App path was verified end-to-end (real merge
+  succeeded, and critically the resulting push still triggered `deploy.yml`
+  -- GitHub's GITHUB_TOKEN loop-prevention does not apply to third-party App
+  installation tokens, confirmed empirically, not assumed from docs).
+  `auto-merge.yml` and `changelog.yml` each mint a fresh ~1h installation
+  token via `actions/create-github-app-token@v1` at the start of the job.
+- Opening feature-branch PRs from local agent/cron work (outside Actions)
+  uses a separate fine-grained PAT (`tilemap-io-agent-pr`, repo-scoped to
+  just this repo, Contents + Pull requests write only, ~90 day expiry),
+  exported as `GH_TOKEN` only for tilemap-io sessions -- never Henry's
+  personal `gh` CLI login. Verified: it can open a real PR on this repo
+  (succeeds) and cannot write to an unrelated repo (403), confirming the
+  repo-scoping actually took effect rather than just displaying narrow in
+  the UI (see `project-bootstrap`'s `references/known-gotchas.md` for why
+  that distinction matters -- a prior token's displayed scope didn't match
+  real behavior until regenerated).
 
 ## Testing changes to .github/workflows/ -- don't trust a read-through
 
