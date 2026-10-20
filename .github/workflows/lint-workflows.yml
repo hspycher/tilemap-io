@@ -1,0 +1,41 @@
+name: Lint workflows
+
+# Safety net added after an incident (2026-10-19/20): auto-merge.yml had the
+# literal string '***' hardcoded in 3 Authorization headers instead of a real
+# $GH_TOKEN reference. Every automated merge attempt had been silently
+# failing with 401 for an unknown period; every merge that *appeared* to
+# work was actually a human manually merging via curl. Nothing ever tested
+# the workflow files themselves (only application code gets CI coverage),
+# so the bug went completely undetected. This workflow exists to close that
+# gap: catch both generic workflow syntax issues and this exact bug class.
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/**"
+  push:
+    branches: [dev, main]
+    paths:
+      - ".github/workflows/**"
+
+permissions:
+  contents: read
+
+jobs:
+  actionlint:
+    name: actionlint (generic syntax/shellcheck-class checks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run actionlint
+        uses: docker://rhysd/actionlint:latest
+        with:
+          args: -color
+
+  no-fake-auth-tokens:
+    name: Regression guard — no literal/fake auth tokens
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fail on literal placeholder tokens in auth headers
+        run: python3 .github/scripts/check_workflow_auth.py
