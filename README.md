@@ -39,3 +39,5 @@ npm run build    # typecheck + production build to dist/
 See AGENTS.md for repo conventions.
 
 Deploy pipeline: GitHub Actions -> S3 -> CloudFront.
+
+Review automation is now event-driven via a GitHub webhook, not polling.
