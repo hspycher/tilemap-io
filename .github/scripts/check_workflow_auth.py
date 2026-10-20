@@ -18,6 +18,12 @@ This script is deliberately narrow and low-false-positive:
      contain '$' (shell var) or '${{' (GitHub Actions expression). A
      quoted literal with neither is flagged.
 
+The auth scheme is matched via an explicit alternation (token|bearer|basic),
+not a wildcard -- an earlier version used a 3-character wildcard that only
+matched scheme words starting with "to", silently missing "Bearer"/"Basic"
+entirely. Caught by ai-review on the PR that introduced this script; fixed
+before merge.
+
 Exit non-zero and print every offending file:line on failure.
 """
 import pathlib
@@ -28,14 +34,14 @@ WORKFLOWS_DIR = pathlib.Path(__file__).resolve().parent.parent / "workflows"
 
 # Exact bug + obvious placeholder variants -- the hard floor.
 FAKE_TOKEN_PATTERN = re.compile(
-    r"Authorization:\s*(token|bearer|basic)\s+"
+    r"Authorization:\s*(?:token|bearer|basic)\s+"
     r"(\*{2,}|x{3,}|redacted|replace[_-]?me|your[_-]?token|fake[_-]?token|changeme)",
     re.IGNORECASE,
 )
 
 # General case: any Authorization header value assigned in a curl -H flag.
 AUTH_HEADER_PATTERN = re.compile(
-    r"Authorization:\s*(token|bearer|basic)\s+([^\"'\\\n]*)",
+    r"Authorization:\s*(?:token|bearer|basic)\s+([^\"'\\\n]*)",
     re.IGNORECASE,
 )
 
@@ -53,7 +59,7 @@ def check_file(path: pathlib.Path) -> list[str]:
 
         m = AUTH_HEADER_PATTERN.search(line)
         if m:
-            value = m.group(2)
+            value = m.group(1)
             if "$" not in value:
                 errors.append(
                     f"{path}:{lineno}: Authorization header value has no '$' "

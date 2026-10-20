@@ -43,6 +43,11 @@ jobs:
 
       - name: Replace or add this PR's changelog entry (idempotent)
         if: steps.guard.outputs.skip != 'true'
+        env:
+          # Untrusted input (PR title is attacker-controlled) must come in
+          # via env, never interpolated directly into the script body --
+          # a title like `"; rm -rf . #` would otherwise execute as shell.
+          PR_TITLE: ${{ github.event.pull_request.title }}
         run: |
           git fetch origin main
           DATE=$(date -u +%Y-%m-%d)
@@ -68,7 +73,7 @@ jobs:
           {
             echo "# Changelog"
             echo ""
-            echo "## ${DATE} — PR #${PR_NUM}: ${{ github.event.pull_request.title }}"
+            echo "## ${DATE} — PR #${PR_NUM}: ${PR_TITLE}"
             echo ""
             echo "$ENTRIES"
             echo ""
