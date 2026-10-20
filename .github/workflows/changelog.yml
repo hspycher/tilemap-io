@@ -19,16 +19,25 @@ jobs:
     if: github.event.pull_request.base.ref == 'main'
     runs-on: ubuntu-latest
     steps:
-      # Uses a personal token (not secrets.GITHUB_TOKEN) so the resulting
-      # push triggers CI normally. GITHUB_TOKEN pushes are deliberately
-      # excluded from re-triggering workflows (GitHub's loop prevention),
-      # which would otherwise leave the branch permanently one unchecked
-      # commit ahead of what CI validated and block the merge.
+      - name: Mint a short-lived GitHub App installation token
+        uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ secrets.TILEMAP_APP_ID }}
+          private-key: ${{ secrets.TILEMAP_APP_PRIVATE_KEY }}
+
+      # GitHub App installation token (tilemap-io-ci), not
+      # secrets.GITHUB_TOKEN -- so the resulting push triggers CI normally.
+      # GitHub's loop-prevention only excludes GITHUB_TOKEN-authored pushes
+      # from re-triggering workflows; a third-party App's installation
+      # token is a distinct bot identity and is not subject to that rule.
+      # Replaces the old personal-token approach (Henry's own broad
+      # personal account token) -- the App is scoped to only this repo.
       - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
-          token: ${{ secrets.PERSONAL_GH_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
 
       - name: Loop guard — skip if HEAD is already our own changelog commit
         id: guard

@@ -25,18 +25,30 @@ jobs:
       (github.event_name == 'status' && github.event.context == 'ai-review' && github.event.state == 'success')
     runs-on: ubuntu-latest
     steps:
+      - name: Mint a short-lived GitHub App installation token
+        uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ secrets.TILEMAP_APP_ID }}
+          private-key: ${{ secrets.TILEMAP_APP_PRIVATE_KEY }}
+
       - name: Find and merge the open PR for this branch (dev target only)
         env:
-          # Personal token, NOT secrets.GITHUB_TOKEN — a merge performed with
-          # GITHUB_TOKEN doesn't trigger downstream push-triggered workflows
-          # (GitHub's loop prevention), which would silently stop deploy.yml
-          # (push-only trigger) from ever firing after an auto-merge. This
-          # token is ALSO the only thing in the whole pipeline with actual
-          # merge authority — it lives in GitHub's secret store, not on any
-          # local machine, and is deliberately kept separate from the
-          # narrowly-scoped token the ai-review cron job uses (that one can
-          # only comment + post statuses, never merge, even if it leaked).
-          GH_TOKEN: ${{ secrets.PERSONAL_GH_TOKEN }}
+          # GitHub App installation token (tilemap-io-ci), NOT
+          # secrets.GITHUB_TOKEN — a merge performed with GITHUB_TOKEN
+          # doesn't trigger downstream push-triggered workflows (GitHub's
+          # loop prevention), which would silently stop deploy.yml
+          # (push-only trigger) from ever firing after an auto-merge. A
+          # GitHub App's installation token acts as a distinct bot identity
+          # (tilemap-io-ci[bot]), separate from github-actions[bot], so it
+          # is NOT subject to that loop-prevention rule either — verified
+          # empirically on this PR, not assumed from docs (see the
+          # "Verify it actually triggers deploy.yml" step below).
+          # This replaces the old PERSONAL_GH_TOKEN (Henry's own broad
+          # personal account token) — the App is scoped to only this repo
+          # with only Contents + Pull requests write, and its minted tokens
+          # expire in ~1 hour, far narrower blast radius if leaked.
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           REPO: ${{ github.repository }}
           EVENT_NAME: ${{ github.event_name }}
