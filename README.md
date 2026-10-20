@@ -35,3 +35,5 @@ npm run build    # typecheck + production build to dist/
 - [ ] Actual game rules (this is just the movement substrate)
 
 <!-- deploy pipeline verification commit -->
+
+Deploy pipeline: GitHub Actions -> S3 -> CloudFront.
