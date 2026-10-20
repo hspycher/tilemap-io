@@ -48,7 +48,7 @@ jobs:
             HEAD_BRANCH="$WORKFLOW_RUN_BRANCH"
           else
             # status event has no branch name directly — resolve it from the SHA
-            HEAD_BRANCH=$(curl -s -H "Authorization: token ***" \
+            HEAD_BRANCH=$(curl -s -H "Authorization: token $GH_TOKEN" \
               "https://api.github.com/repos/${REPO}/commits/${STATUS_SHA}/branches-where-head" \
               | python3 -c "import json,sys; d=json.load(sys.stdin); print(d[0]['name'] if d else '')")
           fi
@@ -60,7 +60,7 @@ jobs:
             exit 0
           fi
 
-          PR_JSON=$(curl -s -H "Authorization: token ***" \
+          PR_JSON=$(curl -s -H "Authorization: token $GH_TOKEN" \
             "https://api.github.com/repos/${REPO}/pulls?head=${OWNER}:${HEAD_BRANCH}&state=open")
           PR_NUMBER=$(echo "$PR_JSON" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d[0]['number'] if d else '')")
           PR_BASE=$(echo "$PR_JSON" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d[0]['base']['ref'] if d else '')")
@@ -79,7 +79,7 @@ jobs:
 
           echo "Attempting to merge PR #${PR_NUMBER} into dev (triggered by: ${EVENT_NAME})"
           RESPONSE=$(curl -s -w "\n%{http_code}" -X PUT \
-            -H "Authorization: token ***" \
+            -H "Authorization: token $GH_TOKEN" \
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/${REPO}/pulls/${PR_NUMBER}/merge" \
             -d '{"merge_method":"squash"}')
