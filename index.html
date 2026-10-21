@@ -36,6 +36,22 @@
         display: flex;
         gap: 8px;
       }
+      #help-overlay {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 1000;
+      }
+      #help-overlay-content {
+        background: #1a1a2e;
+        color: #fff;
+        padding: 20px 24px;
+        border-radius: 8px;
+        max-width: 320px;
+      }
     </style>
   </head>
   <body>
@@ -52,6 +68,15 @@
       <h2>Move History</h2>
       <ol id="move-history-list"></ol>
     </section>
+    <div id="help-overlay" hidden>
+      <div id="help-overlay-content">
+        <h2>Keyboard shortcuts</h2>
+        <ul>
+          <li><kbd>?</kbd> &mdash; toggle this help overlay</li>
+        </ul>
+        <button type="button" data-help-close>Close</button>
+      </div>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

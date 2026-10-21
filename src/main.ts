@@ -2,6 +2,7 @@ import "./style.css";
 import Phaser from "phaser";
 import { TileGrid, type GridPos } from "./tilemap";
 import { appendMove, lastNMoveDescriptions, type MoveRecord } from "./moveHistory";
+import { initHelpOverlay } from "./help";
 
 const TILE_SIZE = 64;
 const GRID_COLS = 8;
@@ -227,6 +228,8 @@ if (themeToggleButton) {
     scene.applyTheme();
   });
 }
+
+initHelpOverlay();
 
 // --- Sound mute toggle -------------------------------------------------
 // Isolated addition: new button + its own event listener only. No existing
