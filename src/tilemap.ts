@@ -9,6 +9,9 @@ export interface GridPos {
 export interface Piece {
   id: string;
   pos: GridPos;
+  /** Owning player/side. Pieces with the same owner (including both
+   * undefined) cannot move onto each other; different owners can capture. */
+  owner?: string;
 }
 
 export class TileGrid {
@@ -75,12 +78,22 @@ export class TileGrid {
     this.resetMoveCount();
   }
 
-  /** Returns true and moves the piece if the move is legal; false otherwise. */
+  /**
+   * Returns true and moves the piece if the move is legal; false otherwise.
+   * A destination occupied by an opponent's piece (different `owner`) is a
+   * capture: the occupant is removed and the moving piece takes its place.
+   * A destination occupied by a piece with the same `owner` (including when
+   * both are undefined) remains illegal — no stacking on your own piece.
+   */
   movePiece(id: string, to: GridPos): boolean {
     const piece = this.pieces.get(id);
     if (!piece) return false;
     if (!this.isInBounds(to)) return false;
-    if (this.pieceAt(to)) return false; // occupied — no stacking/capture yet
+    const occupant = this.pieceAt(to);
+    if (occupant) {
+      if (occupant.owner === piece.owner) return false; // own piece — no stacking
+      this.pieces.delete(occupant.id); // capture
+    }
     piece.pos = to;
     this._moveCount++;
     return true;

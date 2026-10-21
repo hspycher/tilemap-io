@@ -48,6 +48,35 @@ describe("TileGrid", () => {
     expect(moved).toBe(false);
   });
 
+  it("captures an opponent's piece: moves onto it and removes it", () => {
+    grid.addPiece({ id: "p1", pos: { col: 0, row: 0 }, owner: "a" });
+    grid.addPiece({ id: "p2", pos: { col: 1, row: 0 }, owner: "b" });
+    const moved = grid.movePiece("p1", { col: 1, row: 0 });
+    expect(moved).toBe(true);
+    expect(grid.getPiece("p1")?.pos).toEqual({ col: 1, row: 0 });
+    expect(grid.getPiece("p2")).toBeUndefined();
+    expect(grid.pieceAt({ col: 1, row: 0 })?.id).toBe("p1");
+    expect(grid.moveCount).toBe(1);
+  });
+
+  it("refuses to move onto a tile occupied by your own piece", () => {
+    grid.addPiece({ id: "p1", pos: { col: 0, row: 0 }, owner: "a" });
+    grid.addPiece({ id: "p2", pos: { col: 1, row: 0 }, owner: "a" });
+    const moved = grid.movePiece("p1", { col: 1, row: 0 });
+    expect(moved).toBe(false);
+    expect(grid.getPiece("p1")?.pos).toEqual({ col: 0, row: 0 });
+    expect(grid.getPiece("p2")?.pos).toEqual({ col: 1, row: 0 });
+    expect(grid.moveCount).toBe(0);
+  });
+
+  it("still moves to an empty tile unchanged when owners are set", () => {
+    grid.addPiece({ id: "p1", pos: { col: 0, row: 0 }, owner: "a" });
+    const moved = grid.movePiece("p1", { col: 1, row: 0 });
+    expect(moved).toBe(true);
+    expect(grid.getPiece("p1")?.pos).toEqual({ col: 1, row: 0 });
+    expect(grid.moveCount).toBe(1);
+  });
+
   it("refuses to move a nonexistent piece", () => {
     expect(grid.movePiece("ghost", { col: 0, row: 0 })).toBe(false);
   });
