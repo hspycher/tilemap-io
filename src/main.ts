@@ -1,6 +1,7 @@
 import "./style.css";
 import Phaser from "phaser";
 import { TileGrid, type GridPos } from "./tilemap";
+import { appendMove, lastNMoveDescriptions, type MoveRecord } from "./moveHistory";
 
 const TILE_SIZE = 64;
 const GRID_COLS = 8;
@@ -45,6 +46,19 @@ function pixelToGrid(x: number, y: number): GridPos {
 }
 
 const moveCounterEl = document.getElementById("move-counter");
+const moveHistoryListEl = document.getElementById("move-history-list");
+
+let moveHistory: MoveRecord[] = [];
+
+function renderMoveHistory(): void {
+  if (!moveHistoryListEl) return;
+  moveHistoryListEl.innerHTML = "";
+  for (const description of lastNMoveDescriptions(moveHistory)) {
+    const li = document.createElement("li");
+    li.textContent = description;
+    moveHistoryListEl.appendChild(li);
+  }
+}
 
 class MainScene extends Phaser.Scene {
   private grid = new TileGrid(GRID_COLS, GRID_ROWS);
@@ -60,6 +74,7 @@ class MainScene extends Phaser.Scene {
     this.drawBoard();
     this.spawnPieces();
     this.updateMoveCounterDisplay();
+    renderMoveHistory();
 
     this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
       this.handleClick(pointer.x, pointer.y);
@@ -129,6 +144,7 @@ class MainScene extends Phaser.Scene {
       return;
     }
 
+    const fromPos: GridPos = { col: selected.pos.col, row: selected.pos.row };
     if (this.grid.isAdjacentAny(selected.pos, clicked) && this.grid.movePiece(this.selectedId, clicked)) {
       const sprite = this.pieceSprites.get(this.selectedId)!;
       this.tweens.add({
@@ -139,6 +155,8 @@ class MainScene extends Phaser.Scene {
         ease: "Quad.easeOut",
       });
       this.updateMoveCounterDisplay();
+      moveHistory = appendMove(moveHistory, { from: fromPos, to: clicked });
+      renderMoveHistory();
     }
     this.clearSelection();
   }
@@ -170,6 +188,8 @@ class MainScene extends Phaser.Scene {
     this.grid.resetBoard();
     this.spawnPieces();
     this.updateMoveCounterDisplay();
+    moveHistory = [];
+    renderMoveHistory();
   }
 }
 
