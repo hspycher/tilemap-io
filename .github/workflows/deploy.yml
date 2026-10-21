@@ -18,9 +18,9 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 20
           cache: npm
@@ -33,19 +33,23 @@ jobs:
         id: env
         run: |
           if [ "${{ github.ref_name }}" = "main" ]; then
-            echo "bucket=${{ vars.S3_BUCKET_PROD }}" >> "$GITHUB_OUTPUT"
-            echo "distribution=${{ vars.CLOUDFRONT_DIST_PROD }}" >> "$GITHUB_OUTPUT"
-            echo "label=production" >> "$GITHUB_OUTPUT"
-            echo "url=${{ vars.CLOUDFRONT_URL_PROD }}" >> "$GITHUB_OUTPUT"
+            {
+              echo "bucket=${{ vars.S3_BUCKET_PROD }}"
+              echo "distribution=${{ vars.CLOUDFRONT_DIST_PROD }}"
+              echo "label=production"
+              echo "url=${{ vars.CLOUDFRONT_URL_PROD }}"
+            } >> "$GITHUB_OUTPUT"
           else
-            echo "bucket=${{ vars.S3_BUCKET_PREVIEW }}" >> "$GITHUB_OUTPUT"
-            echo "distribution=${{ vars.CLOUDFRONT_DIST_PREVIEW }}" >> "$GITHUB_OUTPUT"
-            echo "label=preview" >> "$GITHUB_OUTPUT"
-            echo "url=${{ vars.CLOUDFRONT_URL_PREVIEW }}" >> "$GITHUB_OUTPUT"
+            {
+              echo "bucket=${{ vars.S3_BUCKET_PREVIEW }}"
+              echo "distribution=${{ vars.CLOUDFRONT_DIST_PREVIEW }}"
+              echo "label=preview"
+              echo "url=${{ vars.CLOUDFRONT_URL_PREVIEW }}"
+            } >> "$GITHUB_OUTPUT"
           fi
 
       - name: Configure AWS credentials (OIDC, no stored keys)
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}

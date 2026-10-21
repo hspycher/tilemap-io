@@ -1,12 +1,46 @@
 import "./style.css";
 import Phaser from "phaser";
-import { TileGrid, type GridPos } from "./tilemap";
+import { TileGrid, countPiecesByOwner, type GridPos } from "./tilemap";
+import { appendMove, lastNMoveDescriptions, type MoveRecord } from "./moveHistory";
+import { initHelpOverlay } from "./help";
+import { difficultyFromMoveCount } from "./difficulty";
 
 const TILE_SIZE = 64;
 const GRID_COLS = 8;
 const GRID_ROWS = 8;
 
 const PIECE_COLORS = [0xe74c3c, 0x3498db, 0xf1c40f, 0x2ecc71];
+
+type Theme = "light" | "dark";
+const THEME_STORAGE_KEY = "tilemap-io-theme";
+
+const BOARD_COLORS: Record<Theme, [number, number]> = {
+  light: [0x2c3e50, 0x34495e],
+  dark: [0x05050a, 0x0d0d14],
+};
+const CANVAS_BACKGROUND: Record<Theme, string> = {
+  light: "#1a1a2e",
+  dark: "#000000",
+};
+
+function loadTheme(): Theme {
+  const stored = localStorage.getItem(THEME_STORAGE_KEY);
+  return stored === "dark" ? "dark" : "light";
+}
+
+let currentTheme: Theme = loadTheme();
+
+const STARTING_POSITIONS: GridPos[] = [
+  { col: 1, row: 1 },
+  { col: 6, row: 1 },
+  { col: 1, row: 6 },
+  { col: 6, row: 6 },
+];
+
+/** Owner ids for the 4 starting pieces, in the same order as STARTING_POSITIONS. */
+const PLAYER_OWNERS = ["player-1", "player-2", "player-3", "player-4"];
+/** Display labels for the piece-count readout, matching PLAYER_OWNERS order. */
+const PLAYER_LABELS = ["P1", "P2", "P3", "P4"];
 
 function colToX(col: number): number {
   return col * TILE_SIZE + TILE_SIZE / 2;
@@ -16,6 +50,35 @@ function rowToY(row: number): number {
 }
 function pixelToGrid(x: number, y: number): GridPos {
   return { col: Math.floor(x / TILE_SIZE), row: Math.floor(y / TILE_SIZE) };
+}
+
+const moveCounterEl = document.getElementById("move-counter");
+const difficultyBadgeEl = document.getElementById("difficulty-badge");
+const moveHistoryListEl = document.getElementById("move-history-list");
+const pieceCountEl = document.getElementById("piece-count");
+
+let moveHistory: MoveRecord[] = [];
+
+function renderMoveHistory(): void {
+  if (!moveHistoryListEl) return;
+  moveHistoryListEl.innerHTML = "";
+  for (const description of lastNMoveDescriptions(moveHistory)) {
+    const li = document.createElement("li");
+    li.textContent = description;
+    moveHistoryListEl.appendChild(li);
+  }
+}
+
+// --- Per-player piece-count readout ------------------------------------
+// Isolated addition: reads piece ownership via the pure countPiecesByOwner
+// helper in tilemap.ts and renders it into its own DOM element. Does not
+// touch move-counter or move-history rendering.
+function renderPieceCount(grid: TileGrid): void {
+  if (!pieceCountEl) return;
+  const counts = countPiecesByOwner(grid.allPieces());
+  pieceCountEl.textContent = PLAYER_OWNERS.map(
+    (owner, i) => `${PLAYER_LABELS[i]}: ${counts[owner] ?? 0}`,
+  ).join("  ");
 }
 
 class MainScene extends Phaser.Scene {
@@ -31,33 +94,52 @@ class MainScene extends Phaser.Scene {
   create(): void {
     this.drawBoard();
     this.spawnPieces();
+    this.updateMoveCounterDisplay();
+    renderMoveHistory();
+    renderPieceCount(this.grid);
 
     this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
       this.handleClick(pointer.x, pointer.y);
     });
   }
 
-  private drawBoard(): void {
-    const g = this.add.graphics();
-    for (let row = 0; row < GRID_ROWS; row++) {
-      for (let col = 0; col < GRID_COLS; col++) {
-        const isDark = (row + col) % 2 === 0;
-        g.fillStyle(isDark ? 0x2c3e50 : 0x34495e, 1);
-        g.fillRect(col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-      }
+  private updateMoveCounterDisplay(): void {
+    if (moveCounterEl) moveCounterEl.textContent = `Moves: ${this.grid.moveCount}`;
+    this.updateDifficultyBadgeDisplay();
+  }
+
+  private updateDifficultyBadgeDisplay(): void {
+    if (difficultyBadgeEl) {
+      difficultyBadgeEl.textContent = `Difficulty: ${difficultyFromMoveCount(this.grid.moveCount)}`;
     }
   }
 
+  private boardGraphics?: Phaser.GameObjects.Graphics;
+
+  private drawBoard(): void {
+    this.boardGraphics?.destroy();
+    const g = this.add.graphics();
+    const [darkTile, lightTile] = BOARD_COLORS[currentTheme];
+    for (let row = 0; row < GRID_ROWS; row++) {
+      for (let col = 0; col < GRID_COLS; col++) {
+        const isDark = (row + col) % 2 === 0;
+        g.fillStyle(isDark ? darkTile : lightTile, 1);
+        g.fillRect(col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+      }
+    }
+    this.boardGraphics = g;
+  }
+
+  /** Re-renders the board tiles and canvas background for the current theme. */
+  applyTheme(): void {
+    this.drawBoard();
+    this.cameras.main.setBackgroundColor(CANVAS_BACKGROUND[currentTheme]);
+  }
+
   private spawnPieces(): void {
-    const starts: GridPos[] = [
-      { col: 1, row: 1 },
-      { col: 6, row: 1 },
-      { col: 1, row: 6 },
-      { col: 6, row: 6 },
-    ];
-    starts.forEach((pos, i) => {
+    STARTING_POSITIONS.forEach((pos, i) => {
       const id = `piece-${i}`;
-      this.grid.addPiece({ id, pos });
+      this.grid.addPiece({ id, pos, owner: PLAYER_OWNERS[i % PLAYER_OWNERS.length] });
       const sprite = this.add.circle(
         colToX(pos.col),
         rowToY(pos.row),
@@ -91,6 +173,7 @@ class MainScene extends Phaser.Scene {
       return;
     }
 
+    const fromPos: GridPos = { col: selected.pos.col, row: selected.pos.row };
     if (this.grid.isAdjacentAny(selected.pos, clicked) && this.grid.movePiece(this.selectedId, clicked)) {
       const sprite = this.pieceSprites.get(this.selectedId)!;
       this.tweens.add({
@@ -100,6 +183,10 @@ class MainScene extends Phaser.Scene {
         duration: 150,
         ease: "Quad.easeOut",
       });
+      this.updateMoveCounterDisplay();
+      moveHistory = appendMove(moveHistory, { from: fromPos, to: clicked });
+      renderMoveHistory();
+      renderPieceCount(this.grid);
     }
     this.clearSelection();
   }
@@ -120,13 +207,75 @@ class MainScene extends Phaser.Scene {
     this.selectedId = null;
     this.selectionRing?.setVisible(false);
   }
+
+  /** Clears the board and re-spawns all pieces at their original starting layout. */
+  resetBoard(): void {
+    this.clearSelection();
+    for (const sprite of this.pieceSprites.values()) {
+      sprite.destroy();
+    }
+    this.pieceSprites.clear();
+    this.grid.resetBoard();
+    this.spawnPieces();
+    this.updateMoveCounterDisplay();
+    moveHistory = [];
+    renderMoveHistory();
+    renderPieceCount(this.grid);
+  }
 }
 
-new Phaser.Game({
+document.body.dataset.theme = currentTheme;
+
+const game = new Phaser.Game({
   type: Phaser.AUTO,
   parent: "app",
   width: GRID_COLS * TILE_SIZE,
   height: GRID_ROWS * TILE_SIZE,
-  backgroundColor: "#1a1a2e",
+  backgroundColor: CANVAS_BACKGROUND[currentTheme],
   scene: [MainScene],
 });
+
+const resetButton = document.getElementById("reset-button");
+resetButton?.addEventListener("click", () => {
+  const scene = game.scene.getScene("main") as MainScene;
+  scene.resetBoard();
+});
+
+function updateThemeToggleLabel(button: HTMLElement): void {
+  button.textContent = currentTheme === "dark" ? "Light mode" : "Dark mode";
+}
+
+const themeToggleButton = document.getElementById("theme-toggle-button");
+if (themeToggleButton) {
+  updateThemeToggleLabel(themeToggleButton);
+  themeToggleButton.addEventListener("click", () => {
+    currentTheme = currentTheme === "dark" ? "light" : "dark";
+    localStorage.setItem(THEME_STORAGE_KEY, currentTheme);
+    document.body.dataset.theme = currentTheme;
+    updateThemeToggleLabel(themeToggleButton);
+
+    const scene = game.scene.getScene("main") as MainScene;
+    scene.applyTheme();
+  });
+}
+
+initHelpOverlay();
+
+// --- Sound mute toggle -------------------------------------------------
+// Isolated addition: new button + its own event listener only. No existing
+// function above is modified. No actual audio plays yet; this just persists
+// the mute flag (via src/sound.ts) for future sound effects to check.
+import { isMuted, toggleMute } from "./sound";
+
+function updateMuteToggleLabel(button: HTMLElement): void {
+  button.textContent = isMuted() ? "Unmute" : "Mute";
+}
+
+const muteToggleButton = document.getElementById("mute-toggle-button");
+if (muteToggleButton) {
+  updateMuteToggleLabel(muteToggleButton);
+  muteToggleButton.addEventListener("click", () => {
+    toggleMute();
+    updateMuteToggleLabel(muteToggleButton);
+  });
+}

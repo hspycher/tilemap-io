@@ -25,3 +25,21 @@ p {
   border-radius: 6px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
 }
+
+#move-history {
+  width: 100%;
+  max-width: 512px;
+}
+
+#move-history h2 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  color: #9a9ab0;
+}
+
+#move-history-list {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 14px;
+  color: #c7c7dd;
+}

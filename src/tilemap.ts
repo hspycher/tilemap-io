@@ -9,12 +9,26 @@ export interface GridPos {
 export interface Piece {
   id: string;
   pos: GridPos;
+  /** Owning player/side. Pieces with the same owner (including both
+   * undefined) cannot move onto each other; different owners can capture. */
+  owner?: string;
+}
+
+/** Snapshot of a single movePiece call, enough to fully revert it. */
+interface MoveRecord {
+  pieceId: string;
+  from: GridPos;
+  to: GridPos;
+  /** The captured piece, if the move was a capture, so it can be restored. */
+  captured?: Piece;
 }
 
 export class TileGrid {
   readonly cols: number;
   readonly rows: number;
   private pieces: Map<string, Piece> = new Map();
+  private _moveCount = 0;
+  private lastMove: MoveRecord | undefined;
 
   constructor(cols: number, rows: number) {
     if (cols <= 0 || rows <= 0) {
@@ -22,6 +36,16 @@ export class TileGrid {
     }
     this.cols = cols;
     this.rows = rows;
+  }
+
+  /** Number of successful movePiece calls since the grid was created or last reset. */
+  get moveCount(): number {
+    return this._moveCount;
+  }
+
+  /** Resets the move counter to zero without touching piece positions. */
+  resetMoveCount(): void {
+    this._moveCount = 0;
   }
 
   isInBounds(pos: GridPos): boolean {
@@ -53,13 +77,62 @@ export class TileGrid {
     return [...this.pieces.values()];
   }
 
-  /** Returns true and moves the piece if the move is legal; false otherwise. */
+  /** Removes every piece from the grid, leaving all tiles empty. */
+  clear(): void {
+    this.pieces.clear();
+  }
+
+  /** Removes every piece and resets the move counter — a full board reset. */
+  resetBoard(): void {
+    this.clear();
+    this.resetMoveCount();
+  }
+
+  /**
+   * Returns true and moves the piece if the move is legal; false otherwise.
+   * A destination occupied by an opponent's piece (different `owner`) is a
+   * capture: the occupant is removed and the moving piece takes its place.
+   * A destination occupied by a piece with the same `owner` (including when
+   * both are undefined) remains illegal — no stacking on your own piece.
+   */
   movePiece(id: string, to: GridPos): boolean {
     const piece = this.pieces.get(id);
     if (!piece) return false;
     if (!this.isInBounds(to)) return false;
-    if (this.pieceAt(to)) return false; // occupied — no stacking/capture yet
+    const occupant = this.pieceAt(to);
+    if (occupant) {
+      if (occupant.owner === piece.owner) return false; // own piece — no stacking
+      this.pieces.delete(occupant.id); // capture
+    }
+    const from = { ...piece.pos };
     piece.pos = to;
+    this._moveCount++;
+    this.lastMove = {
+      pieceId: id,
+      from,
+      to: { ...to },
+      captured: occupant ? { ...occupant, pos: { ...occupant.pos } } : undefined,
+    };
+    return true;
+  }
+
+  /**
+   * Reverts the most recent successful movePiece call: moves the piece back
+   * to its origin and restores any piece it captured. A safe no-op (returns
+   * false, throws nothing) if no move has been made yet, or if it was
+   * already undone. Only the single most recent move can be undone.
+   */
+  undo(): boolean {
+    const move = this.lastMove;
+    if (!move) return false;
+    const piece = this.pieces.get(move.pieceId);
+    if (!piece) return false;
+    piece.pos = { ...move.from };
+    if (move.captured) {
+      this.pieces.set(move.captured.id, { ...move.captured, pos: { ...move.captured.pos } });
+    }
+    this._moveCount = Math.max(0, this._moveCount - 1);
+    this.lastMove = undefined;
     return true;
   }
 
@@ -81,4 +154,21 @@ export class TileGrid {
   isAdjacentAny(a: GridPos, b: GridPos): boolean {
     return this.isAdjacent(a, b) || this.isAdjacentDiagonal(a, b);
   }
+}
+
+/**
+ * Pure helper: counts how many pieces each owner currently has, given a
+ * snapshot of pieces (e.g. from `TileGrid.allPieces()`). Pieces with no
+ * `owner` set are grouped under the `"unowned"` key. No grid/DOM coupling —
+ * this is just a tally over whatever piece list is passed in, so callers
+ * (like a per-player piece-count readout) can call it after any move or
+ * capture without re-deriving ownership logic.
+ */
+export function countPiecesByOwner(pieces: Piece[]): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const piece of pieces) {
+    const owner = piece.owner ?? "unowned";
+    counts[owner] = (counts[owner] ?? 0) + 1;
+  }
+  return counts;
 }
