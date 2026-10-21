@@ -170,6 +170,55 @@ describe("TileGrid", () => {
     expect(grid.getPiece("p1")?.pos).toEqual({ col: 1, row: 0 });
   });
 
+  it("undo is a safe no-op when no move has been made yet", () => {
+    expect(() => grid.undo()).not.toThrow();
+    expect(grid.undo()).toBe(false);
+    expect(grid.moveCount).toBe(0);
+  });
+
+  it("undo reverts a normal move back to the piece's origin", () => {
+    grid.addPiece({ id: "p1", pos: { col: 0, row: 0 } });
+    grid.movePiece("p1", { col: 1, row: 0 });
+    expect(grid.getPiece("p1")?.pos).toEqual({ col: 1, row: 0 });
+    const undone = grid.undo();
+    expect(undone).toBe(true);
+    expect(grid.getPiece("p1")?.pos).toEqual({ col: 0, row: 0 });
+    expect(grid.moveCount).toBe(0);
+  });
+
+  it("undo restores a captured piece after undoing a capture move", () => {
+    grid.addPiece({ id: "p1", pos: { col: 0, row: 0 }, owner: "a" });
+    grid.addPiece({ id: "p2", pos: { col: 1, row: 0 }, owner: "b" });
+    grid.movePiece("p1", { col: 1, row: 0 });
+    expect(grid.getPiece("p2")).toBeUndefined();
+    const undone = grid.undo();
+    expect(undone).toBe(true);
+    expect(grid.getPiece("p1")?.pos).toEqual({ col: 0, row: 0 });
+    expect(grid.getPiece("p2")?.pos).toEqual({ col: 1, row: 0 });
+    expect(grid.pieceAt({ col: 1, row: 0 })?.id).toBe("p2");
+    expect(grid.moveCount).toBe(0);
+  });
+
+  it("undo only reverts the single most recent move, and is itself a no-op afterward", () => {
+    grid.addPiece({ id: "p1", pos: { col: 0, row: 0 } });
+    grid.movePiece("p1", { col: 1, row: 0 });
+    grid.movePiece("p1", { col: 2, row: 0 });
+    grid.undo();
+    expect(grid.getPiece("p1")?.pos).toEqual({ col: 1, row: 0 });
+    expect(grid.moveCount).toBe(1);
+    // Calling undo again with no new move made should be a safe no-op.
+    expect(grid.undo()).toBe(false);
+    expect(grid.getPiece("p1")?.pos).toEqual({ col: 1, row: 0 });
+  });
+
+  it("undo does not increment moveCount and leaves it at zero floor", () => {
+    grid.addPiece({ id: "p1", pos: { col: 0, row: 0 } });
+    grid.movePiece("p1", { col: 1, row: 0 }); // moveCount = 1
+    grid.undo(); // moveCount = 0
+    expect(grid.undo()).toBe(false); // nothing to undo, stays safe
+    expect(grid.moveCount).toBe(0);
+  });
+
   it("resetBoard clears pieces and the move counter together", () => {
     grid.addPiece({ id: "p1", pos: { col: 0, row: 0 } });
     grid.movePiece("p1", { col: 1, row: 0 });
