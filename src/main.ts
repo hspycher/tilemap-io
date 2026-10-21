@@ -230,3 +230,22 @@ if (themeToggleButton) {
 }
 
 initHelpOverlay();
+
+// --- Sound mute toggle -------------------------------------------------
+// Isolated addition: new button + its own event listener only. No existing
+// function above is modified. No actual audio plays yet; this just persists
+// the mute flag (via src/sound.ts) for future sound effects to check.
+import { isMuted, toggleMute } from "./sound";
+
+function updateMuteToggleLabel(button: HTMLElement): void {
+  button.textContent = isMuted() ? "Unmute" : "Mute";
+}
+
+const muteToggleButton = document.getElementById("mute-toggle-button");
+if (muteToggleButton) {
+  updateMuteToggleLabel(muteToggleButton);
+  muteToggleButton.addEventListener("click", () => {
+    toggleMute();
+    updateMuteToggleLabel(muteToggleButton);
+  });
+}

@@ -16,7 +16,8 @@
         color: #7d7d92;
       }
       #theme-toggle-button,
-      #reset-button {
+      #reset-button,
+      #mute-toggle-button {
         font: inherit;
         padding: 6px 14px;
         border-radius: 4px;
@@ -26,7 +27,8 @@
         cursor: pointer;
       }
       body[data-theme="dark"] #theme-toggle-button,
-      body[data-theme="dark"] #reset-button {
+      body[data-theme="dark"] #reset-button,
+      body[data-theme="dark"] #mute-toggle-button {
         background: #15151f;
         border-color: #333;
       }
@@ -59,6 +61,7 @@
     <div id="controls">
       <button id="reset-button" type="button">Reset</button>
       <button id="theme-toggle-button" type="button">Dark mode</button>
+      <button id="mute-toggle-button" type="button">Mute</button>
     </div>
     <div id="app"></div>
     <section id="move-history">
