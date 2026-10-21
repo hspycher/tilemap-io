@@ -14,11 +14,21 @@ export interface Piece {
   owner?: string;
 }
 
+/** Snapshot of a single movePiece call, enough to fully revert it. */
+interface MoveRecord {
+  pieceId: string;
+  from: GridPos;
+  to: GridPos;
+  /** The captured piece, if the move was a capture, so it can be restored. */
+  captured?: Piece;
+}
+
 export class TileGrid {
   readonly cols: number;
   readonly rows: number;
   private pieces: Map<string, Piece> = new Map();
   private _moveCount = 0;
+  private lastMove: MoveRecord | undefined;
 
   constructor(cols: number, rows: number) {
     if (cols <= 0 || rows <= 0) {
@@ -94,8 +104,35 @@ export class TileGrid {
       if (occupant.owner === piece.owner) return false; // own piece — no stacking
       this.pieces.delete(occupant.id); // capture
     }
+    const from = { ...piece.pos };
     piece.pos = to;
     this._moveCount++;
+    this.lastMove = {
+      pieceId: id,
+      from,
+      to: { ...to },
+      captured: occupant ? { ...occupant, pos: { ...occupant.pos } } : undefined,
+    };
+    return true;
+  }
+
+  /**
+   * Reverts the most recent successful movePiece call: moves the piece back
+   * to its origin and restores any piece it captured. A safe no-op (returns
+   * false, throws nothing) if no move has been made yet, or if it was
+   * already undone. Only the single most recent move can be undone.
+   */
+  undo(): boolean {
+    const move = this.lastMove;
+    if (!move) return false;
+    const piece = this.pieces.get(move.pieceId);
+    if (!piece) return false;
+    piece.pos = { ...move.from };
+    if (move.captured) {
+      this.pieces.set(move.captured.id, { ...move.captured, pos: { ...move.captured.pos } });
+    }
+    this._moveCount = Math.max(0, this._moveCount - 1);
+    this.lastMove = undefined;
     return true;
   }
 
