@@ -3,6 +3,7 @@ import Phaser from "phaser";
 import { TileGrid, type GridPos } from "./tilemap";
 import { appendMove, lastNMoveDescriptions, type MoveRecord } from "./moveHistory";
 import { initHelpOverlay } from "./help";
+import { difficultyFromMoveCount } from "./difficulty";
 
 const TILE_SIZE = 64;
 const GRID_COLS = 8;
@@ -47,6 +48,7 @@ function pixelToGrid(x: number, y: number): GridPos {
 }
 
 const moveCounterEl = document.getElementById("move-counter");
+const difficultyBadgeEl = document.getElementById("difficulty-badge");
 const moveHistoryListEl = document.getElementById("move-history-list");
 
 let moveHistory: MoveRecord[] = [];
@@ -84,6 +86,13 @@ class MainScene extends Phaser.Scene {
 
   private updateMoveCounterDisplay(): void {
     if (moveCounterEl) moveCounterEl.textContent = `Moves: ${this.grid.moveCount}`;
+    this.updateDifficultyBadgeDisplay();
+  }
+
+  private updateDifficultyBadgeDisplay(): void {
+    if (difficultyBadgeEl) {
+      difficultyBadgeEl.textContent = `Difficulty: ${difficultyFromMoveCount(this.grid.moveCount)}`;
+    }
   }
 
   private boardGraphics?: Phaser.GameObjects.Graphics;
