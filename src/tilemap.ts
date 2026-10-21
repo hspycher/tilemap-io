@@ -155,3 +155,20 @@ export class TileGrid {
     return this.isAdjacent(a, b) || this.isAdjacentDiagonal(a, b);
   }
 }
+
+/**
+ * Pure helper: counts how many pieces each owner currently has, given a
+ * snapshot of pieces (e.g. from `TileGrid.allPieces()`). Pieces with no
+ * `owner` set are grouped under the `"unowned"` key. No grid/DOM coupling —
+ * this is just a tally over whatever piece list is passed in, so callers
+ * (like a per-player piece-count readout) can call it after any move or
+ * capture without re-deriving ownership logic.
+ */
+export function countPiecesByOwner(pieces: Piece[]): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const piece of pieces) {
+    const owner = piece.owner ?? "unowned";
+    counts[owner] = (counts[owner] ?? 0) + 1;
+  }
+  return counts;
+}

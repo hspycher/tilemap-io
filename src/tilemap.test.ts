@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { TileGrid } from "./tilemap";
+import { TileGrid, countPiecesByOwner } from "./tilemap";
 
 describe("TileGrid", () => {
   let grid: TileGrid;
@@ -225,5 +225,51 @@ describe("TileGrid", () => {
     grid.resetBoard();
     expect(grid.moveCount).toBe(0);
     expect(grid.allPieces()).toEqual([]);
+  });
+});
+
+describe("countPiecesByOwner", () => {
+  it("returns an empty object for no pieces", () => {
+    expect(countPiecesByOwner([])).toEqual({});
+  });
+
+  it("counts one piece per distinct owner", () => {
+    const pieces = [
+      { id: "p1", pos: { col: 0, row: 0 }, owner: "player-1" },
+      { id: "p2", pos: { col: 1, row: 1 }, owner: "player-2" },
+      { id: "p3", pos: { col: 2, row: 2 }, owner: "player-3" },
+      { id: "p4", pos: { col: 3, row: 3 }, owner: "player-4" },
+    ];
+    expect(countPiecesByOwner(pieces)).toEqual({
+      "player-1": 1,
+      "player-2": 1,
+      "player-3": 1,
+      "player-4": 1,
+    });
+  });
+
+  it("tallies multiple pieces belonging to the same owner", () => {
+    const pieces = [
+      { id: "p1", pos: { col: 0, row: 0 }, owner: "player-1" },
+      { id: "p2", pos: { col: 1, row: 1 }, owner: "player-1" },
+      { id: "p3", pos: { col: 2, row: 2 }, owner: "player-2" },
+    ];
+    expect(countPiecesByOwner(pieces)).toEqual({ "player-1": 2, "player-2": 1 });
+  });
+
+  it("groups pieces with no owner under the 'unowned' key", () => {
+    const pieces = [
+      { id: "p1", pos: { col: 0, row: 0 } },
+      { id: "p2", pos: { col: 1, row: 1 } },
+    ];
+    expect(countPiecesByOwner(pieces)).toEqual({ unowned: 2 });
+  });
+
+  it("reflects a capture: the captured piece's owner no longer counts", () => {
+    const grid = new TileGrid(5, 5);
+    grid.addPiece({ id: "p1", pos: { col: 0, row: 0 }, owner: "player-1" });
+    grid.addPiece({ id: "p2", pos: { col: 1, row: 0 }, owner: "player-2" });
+    grid.movePiece("p1", { col: 1, row: 0 }); // capture
+    expect(countPiecesByOwner(grid.allPieces())).toEqual({ "player-1": 1 });
   });
 });

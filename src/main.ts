@@ -1,6 +1,6 @@
 import "./style.css";
 import Phaser from "phaser";
-import { TileGrid, type GridPos } from "./tilemap";
+import { TileGrid, countPiecesByOwner, type GridPos } from "./tilemap";
 import { appendMove, lastNMoveDescriptions, type MoveRecord } from "./moveHistory";
 import { initHelpOverlay } from "./help";
 
@@ -36,6 +36,11 @@ const STARTING_POSITIONS: GridPos[] = [
   { col: 6, row: 6 },
 ];
 
+/** Owner ids for the 4 starting pieces, in the same order as STARTING_POSITIONS. */
+const PLAYER_OWNERS = ["player-1", "player-2", "player-3", "player-4"];
+/** Display labels for the piece-count readout, matching PLAYER_OWNERS order. */
+const PLAYER_LABELS = ["P1", "P2", "P3", "P4"];
+
 function colToX(col: number): number {
   return col * TILE_SIZE + TILE_SIZE / 2;
 }
@@ -48,6 +53,7 @@ function pixelToGrid(x: number, y: number): GridPos {
 
 const moveCounterEl = document.getElementById("move-counter");
 const moveHistoryListEl = document.getElementById("move-history-list");
+const pieceCountEl = document.getElementById("piece-count");
 
 let moveHistory: MoveRecord[] = [];
 
@@ -59,6 +65,18 @@ function renderMoveHistory(): void {
     li.textContent = description;
     moveHistoryListEl.appendChild(li);
   }
+}
+
+// --- Per-player piece-count readout ------------------------------------
+// Isolated addition: reads piece ownership via the pure countPiecesByOwner
+// helper in tilemap.ts and renders it into its own DOM element. Does not
+// touch move-counter or move-history rendering.
+function renderPieceCount(grid: TileGrid): void {
+  if (!pieceCountEl) return;
+  const counts = countPiecesByOwner(grid.allPieces());
+  pieceCountEl.textContent = PLAYER_OWNERS.map(
+    (owner, i) => `${PLAYER_LABELS[i]}: ${counts[owner] ?? 0}`,
+  ).join("  ");
 }
 
 class MainScene extends Phaser.Scene {
@@ -76,6 +94,7 @@ class MainScene extends Phaser.Scene {
     this.spawnPieces();
     this.updateMoveCounterDisplay();
     renderMoveHistory();
+    renderPieceCount(this.grid);
 
     this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
       this.handleClick(pointer.x, pointer.y);
@@ -111,7 +130,7 @@ class MainScene extends Phaser.Scene {
   private spawnPieces(): void {
     STARTING_POSITIONS.forEach((pos, i) => {
       const id = `piece-${i}`;
-      this.grid.addPiece({ id, pos });
+      this.grid.addPiece({ id, pos, owner: PLAYER_OWNERS[i % PLAYER_OWNERS.length] });
       const sprite = this.add.circle(
         colToX(pos.col),
         rowToY(pos.row),
@@ -158,6 +177,7 @@ class MainScene extends Phaser.Scene {
       this.updateMoveCounterDisplay();
       moveHistory = appendMove(moveHistory, { from: fromPos, to: clicked });
       renderMoveHistory();
+      renderPieceCount(this.grid);
     }
     this.clearSelection();
   }
@@ -191,6 +211,7 @@ class MainScene extends Phaser.Scene {
     this.updateMoveCounterDisplay();
     moveHistory = [];
     renderMoveHistory();
+    renderPieceCount(this.grid);
   }
 }
 
