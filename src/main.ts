@@ -8,6 +8,25 @@ const GRID_ROWS = 8;
 
 const PIECE_COLORS = [0xe74c3c, 0x3498db, 0xf1c40f, 0x2ecc71];
 
+type Theme = "light" | "dark";
+const THEME_STORAGE_KEY = "tilemap-io-theme";
+
+const BOARD_COLORS: Record<Theme, [number, number]> = {
+  light: [0x2c3e50, 0x34495e],
+  dark: [0x05050a, 0x0d0d14],
+};
+const CANVAS_BACKGROUND: Record<Theme, string> = {
+  light: "#1a1a2e",
+  dark: "#000000",
+};
+
+function loadTheme(): Theme {
+  const stored = localStorage.getItem(THEME_STORAGE_KEY);
+  return stored === "dark" ? "dark" : "light";
+}
+
+let currentTheme: Theme = loadTheme();
+
 const STARTING_POSITIONS: GridPos[] = [
   { col: 1, row: 1 },
   { col: 6, row: 1 },
@@ -51,15 +70,26 @@ class MainScene extends Phaser.Scene {
     if (moveCounterEl) moveCounterEl.textContent = `Moves: ${this.grid.moveCount}`;
   }
 
+  private boardGraphics?: Phaser.GameObjects.Graphics;
+
   private drawBoard(): void {
+    this.boardGraphics?.destroy();
     const g = this.add.graphics();
+    const [darkTile, lightTile] = BOARD_COLORS[currentTheme];
     for (let row = 0; row < GRID_ROWS; row++) {
       for (let col = 0; col < GRID_COLS; col++) {
         const isDark = (row + col) % 2 === 0;
-        g.fillStyle(isDark ? 0x2c3e50 : 0x34495e, 1);
+        g.fillStyle(isDark ? darkTile : lightTile, 1);
         g.fillRect(col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
       }
     }
+    this.boardGraphics = g;
+  }
+
+  /** Re-renders the board tiles and canvas background for the current theme. */
+  applyTheme(): void {
+    this.drawBoard();
+    this.cameras.main.setBackgroundColor(CANVAS_BACKGROUND[currentTheme]);
   }
 
   private spawnPieces(): void {
@@ -143,12 +173,14 @@ class MainScene extends Phaser.Scene {
   }
 }
 
+document.body.dataset.theme = currentTheme;
+
 const game = new Phaser.Game({
   type: Phaser.AUTO,
   parent: "app",
   width: GRID_COLS * TILE_SIZE,
   height: GRID_ROWS * TILE_SIZE,
-  backgroundColor: "#1a1a2e",
+  backgroundColor: CANVAS_BACKGROUND[currentTheme],
   scene: [MainScene],
 });
 
@@ -157,3 +189,21 @@ resetButton?.addEventListener("click", () => {
   const scene = game.scene.getScene("main") as MainScene;
   scene.resetBoard();
 });
+
+function updateThemeToggleLabel(button: HTMLElement): void {
+  button.textContent = currentTheme === "dark" ? "Light mode" : "Dark mode";
+}
+
+const themeToggleButton = document.getElementById("theme-toggle-button");
+if (themeToggleButton) {
+  updateThemeToggleLabel(themeToggleButton);
+  themeToggleButton.addEventListener("click", () => {
+    currentTheme = currentTheme === "dark" ? "light" : "dark";
+    localStorage.setItem(THEME_STORAGE_KEY, currentTheme);
+    document.body.dataset.theme = currentTheme;
+    updateThemeToggleLabel(themeToggleButton);
+
+    const scene = game.scene.getScene("main") as MainScene;
+    scene.applyTheme();
+  });
+}

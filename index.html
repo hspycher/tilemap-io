@@ -5,12 +5,45 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>tilemap-io</title>
+    <style>
+      /* Dark-mode overrides. Higher-specificity attribute selectors so they
+         win the cascade regardless of when style.css gets injected. */
+      body[data-theme="dark"] {
+        background: #060608;
+        color: #d8d8e4;
+      }
+      body[data-theme="dark"] p {
+        color: #7d7d92;
+      }
+      #theme-toggle-button,
+      #reset-button {
+        font: inherit;
+        padding: 6px 14px;
+        border-radius: 4px;
+        border: 1px solid #555;
+        background: #2c2c3a;
+        color: inherit;
+        cursor: pointer;
+      }
+      body[data-theme="dark"] #theme-toggle-button,
+      body[data-theme="dark"] #reset-button {
+        background: #15151f;
+        border-color: #333;
+      }
+      #controls {
+        display: flex;
+        gap: 8px;
+      }
+    </style>
   </head>
   <body>
     <h1>tilemap-io</h1>
     <p>Click a piece, then click an adjacent tile to move it.</p>
     <p id="move-counter">Moves: 0</p>
-    <button id="reset-button" type="button">Reset</button>
+    <div id="controls">
+      <button id="reset-button" type="button">Reset</button>
+      <button id="theme-toggle-button" type="button">Dark mode</button>
+    </div>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
