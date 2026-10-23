@@ -172,3 +172,14 @@ export function countPiecesByOwner(pieces: Piece[]): Record<string, number> {
   }
   return counts;
 }
+
+/**
+ * Pure helper: total number of pieces currently remaining on the board,
+ * given a snapshot of pieces (e.g. from `TileGrid.allPieces()`). No
+ * grid/DOM coupling — just the count of the list passed in, so callers
+ * (like a total-pieces-remaining readout) can call it after any move or
+ * capture without re-deriving anything.
+ */
+export function totalRemainingPieces(pieces: Piece[]): number {
+  return pieces.length;
+}
