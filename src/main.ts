@@ -1,6 +1,6 @@
 import "./style.css";
 import Phaser from "phaser";
-import { TileGrid, countPiecesByOwner, type GridPos } from "./tilemap";
+import { TileGrid, countPiecesByOwner, totalRemainingPieces, type GridPos } from "./tilemap";
 import { appendMove, lastNMoveDescriptions, type MoveRecord } from "./moveHistory";
 import { initHelpOverlay } from "./help";
 import { difficultyFromMoveCount } from "./difficulty";
@@ -56,6 +56,7 @@ const moveCounterEl = document.getElementById("move-counter");
 const difficultyBadgeEl = document.getElementById("difficulty-badge");
 const moveHistoryListEl = document.getElementById("move-history-list");
 const pieceCountEl = document.getElementById("piece-count");
+const totalPiecesEl = document.getElementById("total-pieces");
 
 let moveHistory: MoveRecord[] = [];
 
@@ -81,6 +82,15 @@ function renderPieceCount(grid: TileGrid): void {
   ).join("  ");
 }
 
+// --- Total-pieces-remaining readout -------------------------------------
+// Isolated addition: reads the total via the pure totalRemainingPieces
+// helper in tilemap.ts and renders it into its own DOM element. Does not
+// touch move-counter, move-history, or per-player piece-count rendering.
+function renderTotalPieces(grid: TileGrid): void {
+  if (!totalPiecesEl) return;
+  totalPiecesEl.textContent = `Pieces remaining: ${totalRemainingPieces(grid.allPieces())}`;
+}
+
 class MainScene extends Phaser.Scene {
   private grid = new TileGrid(GRID_COLS, GRID_ROWS);
   private pieceSprites = new Map<string, Phaser.GameObjects.Arc>();
@@ -97,6 +107,7 @@ class MainScene extends Phaser.Scene {
     this.updateMoveCounterDisplay();
     renderMoveHistory();
     renderPieceCount(this.grid);
+    renderTotalPieces(this.grid);
 
     this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
       this.handleClick(pointer.x, pointer.y);
@@ -187,6 +198,7 @@ class MainScene extends Phaser.Scene {
       moveHistory = appendMove(moveHistory, { from: fromPos, to: clicked });
       renderMoveHistory();
       renderPieceCount(this.grid);
+      renderTotalPieces(this.grid);
     }
     this.clearSelection();
   }
@@ -221,6 +233,7 @@ class MainScene extends Phaser.Scene {
     moveHistory = [];
     renderMoveHistory();
     renderPieceCount(this.grid);
+    renderTotalPieces(this.grid);
   }
 }
 
@@ -295,5 +308,24 @@ if (fullscreenToggleButton) {
     } else {
       document.exitFullscreen?.();
     }
+  });
+}
+
+// --- Board flip (rotate view) toggle -----------------------------------
+// Isolated addition: new button + its own event listener only, appended at
+// the end of the file per AGENTS.md. Purely visual/presentation -- toggles a
+// CSS class that rotates the board's container element 180 degrees. No game
+// logic, grid coordinates, or piece data are touched; this only flips how
+// the existing board is rendered on screen.
+import { nextBoardFlippedState } from "./boardFlip";
+
+const BOARD_FLIPPED_CLASS = "board-flipped";
+
+const appEl = document.getElementById("app");
+const flipBoardButton = document.getElementById("flip-board-button");
+if (appEl && flipBoardButton) {
+  flipBoardButton.addEventListener("click", () => {
+    const isFlipped = appEl.classList.contains(BOARD_FLIPPED_CLASS);
+    appEl.classList.toggle(BOARD_FLIPPED_CLASS, nextBoardFlippedState(isFlipped));
   });
 }
