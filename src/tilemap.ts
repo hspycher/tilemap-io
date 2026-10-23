@@ -199,3 +199,14 @@ export function longestStreakWithoutCapture(moves: MoveCaptureEvent[]): number {
   }
   return longest;
 }
+
+/**
+ * Pure helper: total number of pieces currently remaining on the board,
+ * given a snapshot of pieces (e.g. from `TileGrid.allPieces()`). No
+ * grid/DOM coupling — just the count of the list passed in, so callers
+ * (like a total-pieces-remaining readout) can call it after any move or
+ * capture without re-deriving anything.
+ */
+export function totalRemainingPieces(pieces: Piece[]): number {
+  return pieces.length;
+}
