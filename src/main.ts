@@ -293,6 +293,24 @@ if (muteToggleButton) {
   });
 }
 
+// --- Fullscreen toggle ---------------------------------------------------
+// Isolated addition: new button + its own event listener only, calling the
+// browser Fullscreen API on the game canvas. No existing function above is
+// modified.
+const fullscreenToggleButton = document.getElementById(
+  "fullscreen-toggle-button",
+);
+if (fullscreenToggleButton) {
+  fullscreenToggleButton.addEventListener("click", () => {
+    const canvas = game.canvas;
+    if (!document.fullscreenElement) {
+      canvas.requestFullscreen?.();
+    } else {
+      document.exitFullscreen?.();
+    }
+  });
+}
+
 // --- Board flip (rotate view) toggle -----------------------------------
 // Isolated addition: new button + its own event listener only, appended at
 // the end of the file per AGENTS.md. Purely visual/presentation -- toggles a
