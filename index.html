@@ -36,6 +36,9 @@
         display: flex;
         gap: 8px;
       }
+      #app.board-flipped {
+        transform: rotate(180deg);
+      }
       #help-overlay {
         position: fixed;
         inset: 0;
@@ -64,6 +67,7 @@
       <button id="reset-button" type="button">Reset</button>
       <button id="theme-toggle-button" type="button">Dark mode</button>
       <button id="mute-toggle-button" type="button">Mute</button>
+      <button id="flip-board-button" type="button">Flip Board</button>
     </div>
     <div id="app"></div>
     <section id="move-history">

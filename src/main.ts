@@ -279,3 +279,22 @@ if (muteToggleButton) {
     updateMuteToggleLabel(muteToggleButton);
   });
 }
+
+// --- Board flip (rotate view) toggle -----------------------------------
+// Isolated addition: new button + its own event listener only, appended at
+// the end of the file per AGENTS.md. Purely visual/presentation -- toggles a
+// CSS class that rotates the board's container element 180 degrees. No game
+// logic, grid coordinates, or piece data are touched; this only flips how
+// the existing board is rendered on screen.
+import { nextBoardFlippedState } from "./boardFlip";
+
+const BOARD_FLIPPED_CLASS = "board-flipped";
+
+const appEl = document.getElementById("app");
+const flipBoardButton = document.getElementById("flip-board-button");
+if (appEl && flipBoardButton) {
+  flipBoardButton.addEventListener("click", () => {
+    const isFlipped = appEl.classList.contains(BOARD_FLIPPED_CLASS);
+    appEl.classList.toggle(BOARD_FLIPPED_CLASS, nextBoardFlippedState(isFlipped));
+  });
+}
