@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { TileGrid, countPiecesByOwner } from "./tilemap";
+import { TileGrid, countPiecesByOwner, totalRemainingPieces } from "./tilemap";
 
 describe("TileGrid", () => {
   let grid: TileGrid;
@@ -271,5 +271,29 @@ describe("countPiecesByOwner", () => {
     grid.addPiece({ id: "p2", pos: { col: 1, row: 0 }, owner: "player-2" });
     grid.movePiece("p1", { col: 1, row: 0 }); // capture
     expect(countPiecesByOwner(grid.allPieces())).toEqual({ "player-1": 1 });
+  });
+});
+
+describe("totalRemainingPieces", () => {
+  it("returns 0 for no pieces", () => {
+    expect(totalRemainingPieces([])).toBe(0);
+  });
+
+  it("counts all pieces regardless of owner", () => {
+    const pieces = [
+      { id: "p1", pos: { col: 0, row: 0 }, owner: "player-1" },
+      { id: "p2", pos: { col: 1, row: 1 }, owner: "player-2" },
+      { id: "p3", pos: { col: 2, row: 2 } },
+    ];
+    expect(totalRemainingPieces(pieces)).toBe(3);
+  });
+
+  it("decreases after a capture removes a piece from the grid", () => {
+    const grid = new TileGrid(5, 5);
+    grid.addPiece({ id: "p1", pos: { col: 0, row: 0 }, owner: "player-1" });
+    grid.addPiece({ id: "p2", pos: { col: 1, row: 0 }, owner: "player-2" });
+    expect(totalRemainingPieces(grid.allPieces())).toBe(2);
+    grid.movePiece("p1", { col: 1, row: 0 }); // capture
+    expect(totalRemainingPieces(grid.allPieces())).toBe(1);
   });
 });
