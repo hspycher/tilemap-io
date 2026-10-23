@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { TileGrid, countPiecesByOwner } from "./tilemap";
+import { TileGrid, countPiecesByOwner, longestStreakWithoutCapture } from "./tilemap";
 
 describe("TileGrid", () => {
   let grid: TileGrid;
@@ -271,5 +271,42 @@ describe("countPiecesByOwner", () => {
     grid.addPiece({ id: "p2", pos: { col: 1, row: 0 }, owner: "player-2" });
     grid.movePiece("p1", { col: 1, row: 0 }); // capture
     expect(countPiecesByOwner(grid.allPieces())).toEqual({ "player-1": 1 });
+  });
+});
+
+describe("longestStreakWithoutCapture", () => {
+  it("returns 0 for an empty history", () => {
+    expect(longestStreakWithoutCapture([])).toBe(0);
+  });
+
+  it("returns the full length when there are no captures ever", () => {
+    const moves = [{ captured: false }, { captured: false }, { captured: false }];
+    expect(longestStreakWithoutCapture(moves)).toBe(3);
+  });
+
+  it("finds the longest run among a mix of captures and non-captures", () => {
+    const moves = [
+      { captured: false },
+      { captured: true },
+      { captured: false },
+      { captured: false },
+      { captured: false },
+      { captured: true },
+      { captured: false },
+    ];
+    // longest run is the 3 consecutive non-captures in the middle
+    expect(longestStreakWithoutCapture(moves)).toBe(3);
+  });
+
+  it("counts a trailing streak still in progress at the end of history", () => {
+    const moves = [
+      { captured: true },
+      { captured: false },
+      { captured: false },
+      { captured: false },
+      { captured: false },
+    ];
+    // trailing streak of 4 is longer than anything before the last capture
+    expect(longestStreakWithoutCapture(moves)).toBe(4);
   });
 });

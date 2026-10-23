@@ -172,3 +172,30 @@ export function countPiecesByOwner(pieces: Piece[]): Record<string, number> {
   }
   return counts;
 }
+
+/** A single move event for streak-tracking purposes: just whether it captured. */
+export interface MoveCaptureEvent {
+  captured: boolean;
+}
+
+/**
+ * Pure helper: given a chronological list of move events (each flagged as a
+ * capture or not), returns the longest run of consecutive non-capture moves
+ * anywhere in the history, including a trailing streak still in progress at
+ * the end. Does not require a live `TileGrid` — callers can build the event
+ * list from `TileGrid.movePiece`'s return info, recorded move history, or
+ * any other source. Returns 0 for an empty history.
+ */
+export function longestStreakWithoutCapture(moves: MoveCaptureEvent[]): number {
+  let longest = 0;
+  let current = 0;
+  for (const move of moves) {
+    if (move.captured) {
+      current = 0;
+    } else {
+      current++;
+      if (current > longest) longest = current;
+    }
+  }
+  return longest;
+}
