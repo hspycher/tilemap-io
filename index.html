@@ -48,6 +48,13 @@
         background: rgba(0, 0, 0, 0.6);
         z-index: 1000;
       }
+      /* Without this, the attribute-selector UA rule `[hidden] { display:
+         none }` loses to the ID selector above, so toggling `hidden` in JS
+         never actually hides the overlay -- it stays open forever and
+         blocks the game. See issue #72. */
+      #help-overlay[hidden] {
+        display: none;
+      }
       #help-overlay-content {
         background: #1a1a2e;
         color: #fff;
