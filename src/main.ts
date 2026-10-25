@@ -1,6 +1,6 @@
 import "./style.css";
 import Phaser from "phaser";
-import { TileGrid, countPiecesByOwner, type GridPos } from "./tilemap";
+import { TileGrid, countPiecesByOwner, totalRemainingPieces, type GridPos } from "./tilemap";
 import { appendMove, lastNMoveDescriptions, type MoveRecord } from "./moveHistory";
 import { initHelpOverlay } from "./help";
 import { difficultyFromMoveCount } from "./difficulty";
@@ -56,6 +56,7 @@ const moveCounterEl = document.getElementById("move-counter");
 const difficultyBadgeEl = document.getElementById("difficulty-badge");
 const moveHistoryListEl = document.getElementById("move-history-list");
 const pieceCountEl = document.getElementById("piece-count");
+const totalPiecesEl = document.getElementById("total-pieces");
 
 let moveHistory: MoveRecord[] = [];
 
@@ -81,6 +82,15 @@ function renderPieceCount(grid: TileGrid): void {
   ).join("  ");
 }
 
+// --- Total-pieces-remaining readout -------------------------------------
+// Isolated addition: reads the total via the pure totalRemainingPieces
+// helper in tilemap.ts and renders it into its own DOM element. Does not
+// touch move-counter, move-history, or per-player piece-count rendering.
+function renderTotalPieces(grid: TileGrid): void {
+  if (!totalPiecesEl) return;
+  totalPiecesEl.textContent = `Pieces remaining: ${totalRemainingPieces(grid.allPieces())}`;
+}
+
 class MainScene extends Phaser.Scene {
   private grid = new TileGrid(GRID_COLS, GRID_ROWS);
   private pieceSprites = new Map<string, Phaser.GameObjects.Arc>();
@@ -97,6 +107,7 @@ class MainScene extends Phaser.Scene {
     this.updateMoveCounterDisplay();
     renderMoveHistory();
     renderPieceCount(this.grid);
+    renderTotalPieces(this.grid);
 
     this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
       this.handleClick(pointer.x, pointer.y);
@@ -119,6 +130,13 @@ class MainScene extends Phaser.Scene {
   private drawBoard(): void {
     this.boardGraphics?.destroy();
     const g = this.add.graphics();
+    // Pin the board to the back of the display list. Without this, calling
+    // drawBoard() again from applyTheme() re-adds the graphics object at the
+    // END of the display list (Phaser renders by add-order by default), so
+    // toggling the theme makes the board render ON TOP of the already-placed
+    // piece sprites -- in dark mode's near-black tile colors this makes the
+    // pieces look like they've disappeared.
+    g.setDepth(-1);
     const [darkTile, lightTile] = BOARD_COLORS[currentTheme];
     for (let row = 0; row < GRID_ROWS; row++) {
       for (let col = 0; col < GRID_COLS; col++) {
@@ -187,6 +205,7 @@ class MainScene extends Phaser.Scene {
       moveHistory = appendMove(moveHistory, { from: fromPos, to: clicked });
       renderMoveHistory();
       renderPieceCount(this.grid);
+      renderTotalPieces(this.grid);
     }
     this.clearSelection();
   }
@@ -221,6 +240,7 @@ class MainScene extends Phaser.Scene {
     moveHistory = [];
     renderMoveHistory();
     renderPieceCount(this.grid);
+    renderTotalPieces(this.grid);
   }
 }
 
@@ -277,5 +297,49 @@ if (muteToggleButton) {
   muteToggleButton.addEventListener("click", () => {
     toggleMute();
     updateMuteToggleLabel(muteToggleButton);
+  });
+}
+
+// --- Fullscreen toggle ---------------------------------------------------
+// Isolated addition: new button + its own event listener only, calling the
+// browser Fullscreen API on the game canvas. No existing function above is
+// modified.
+const fullscreenToggleButton = document.getElementById(
+  "fullscreen-toggle-button",
+);
+if (fullscreenToggleButton) {
+  fullscreenToggleButton.addEventListener("click", () => {
+    // Use Phaser's own Scale Manager fullscreen API instead of calling
+    // canvas.requestFullscreen()/document.exitFullscreen() directly. Going
+    // through the raw DOM API bypasses Phaser's ScaleManager entirely, so it
+    // never recalculates the canvas's displayed-size-to-resolution ratio
+    // after the browser stretches the canvas to fill the screen -- pointer
+    // input then maps clicks using the stale pre-fullscreen scale factor,
+    // so clicks land on the wrong grid cell (or off-grid) and pieces become
+    // impossible to select/move while in fullscreen.
+    if (!game.scale.isFullscreen) {
+      game.scale.startFullscreen();
+    } else {
+      game.scale.stopFullscreen();
+    }
+  });
+}
+
+// --- Board flip (rotate view) toggle -----------------------------------
+// Isolated addition: new button + its own event listener only, appended at
+// the end of the file per AGENTS.md. Purely visual/presentation -- toggles a
+// CSS class that rotates the board's container element 180 degrees. No game
+// logic, grid coordinates, or piece data are touched; this only flips how
+// the existing board is rendered on screen.
+import { nextBoardFlippedState } from "./boardFlip";
+
+const BOARD_FLIPPED_CLASS = "board-flipped";
+
+const appEl = document.getElementById("app");
+const flipBoardButton = document.getElementById("flip-board-button");
+if (appEl && flipBoardButton) {
+  flipBoardButton.addEventListener("click", () => {
+    const isFlipped = appEl.classList.contains(BOARD_FLIPPED_CLASS);
+    appEl.classList.toggle(BOARD_FLIPPED_CLASS, nextBoardFlippedState(isFlipped));
   });
 }

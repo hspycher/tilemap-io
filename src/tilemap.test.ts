@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { TileGrid, countPiecesByOwner } from "./tilemap";
+import { TileGrid, countPiecesByOwner, longestStreakWithoutCapture, totalRemainingPieces } from "./tilemap";
 
 describe("TileGrid", () => {
   let grid: TileGrid;
@@ -271,5 +271,66 @@ describe("countPiecesByOwner", () => {
     grid.addPiece({ id: "p2", pos: { col: 1, row: 0 }, owner: "player-2" });
     grid.movePiece("p1", { col: 1, row: 0 }); // capture
     expect(countPiecesByOwner(grid.allPieces())).toEqual({ "player-1": 1 });
+  });
+});
+
+describe("longestStreakWithoutCapture", () => {
+  it("returns 0 for an empty history", () => {
+    expect(longestStreakWithoutCapture([])).toBe(0);
+  });
+
+  it("returns the full length when there are no captures ever", () => {
+    const moves = [{ captured: false }, { captured: false }, { captured: false }];
+    expect(longestStreakWithoutCapture(moves)).toBe(3);
+  });
+
+  it("finds the longest run among a mix of captures and non-captures", () => {
+    const moves = [
+      { captured: false },
+      { captured: true },
+      { captured: false },
+      { captured: false },
+      { captured: false },
+      { captured: true },
+      { captured: false },
+    ];
+    // longest run is the 3 consecutive non-captures in the middle
+    expect(longestStreakWithoutCapture(moves)).toBe(3);
+  });
+
+  it("counts a trailing streak still in progress at the end of history", () => {
+    const moves = [
+      { captured: true },
+      { captured: false },
+      { captured: false },
+      { captured: false },
+      { captured: false },
+    ];
+    // trailing streak of 4 is longer than anything before the last capture
+    expect(longestStreakWithoutCapture(moves)).toBe(4);
+  });
+});
+
+describe("totalRemainingPieces", () => {
+  it("returns 0 for no pieces", () => {
+    expect(totalRemainingPieces([])).toBe(0);
+  });
+
+  it("counts all pieces regardless of owner", () => {
+    const pieces = [
+      { id: "p1", pos: { col: 0, row: 0 }, owner: "player-1" },
+      { id: "p2", pos: { col: 1, row: 1 }, owner: "player-2" },
+      { id: "p3", pos: { col: 2, row: 2 } },
+    ];
+    expect(totalRemainingPieces(pieces)).toBe(3);
+  });
+
+  it("decreases after a capture removes a piece from the grid", () => {
+    const grid = new TileGrid(5, 5);
+    grid.addPiece({ id: "p1", pos: { col: 0, row: 0 }, owner: "player-1" });
+    grid.addPiece({ id: "p2", pos: { col: 1, row: 0 }, owner: "player-2" });
+    expect(totalRemainingPieces(grid.allPieces())).toBe(2);
+    grid.movePiece("p1", { col: 1, row: 0 }); // capture
+    expect(totalRemainingPieces(grid.allPieces())).toBe(1);
   });
 });

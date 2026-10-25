@@ -36,6 +36,9 @@
         display: flex;
         gap: 8px;
       }
+      #app.board-flipped {
+        transform: rotate(180deg);
+      }
       #help-overlay {
         position: fixed;
         inset: 0;
@@ -44,6 +47,13 @@
         justify-content: center;
         background: rgba(0, 0, 0, 0.6);
         z-index: 1000;
+      }
+      /* Without this, the attribute-selector UA rule `[hidden] { display:
+         none }` loses to the ID selector above, so toggling `hidden` in JS
+         never actually hides the overlay -- it stays open forever and
+         blocks the game. See issue #72. */
+      #help-overlay[hidden] {
+        display: none;
       }
       #help-overlay-content {
         background: #1a1a2e;
@@ -60,10 +70,13 @@
     <p id="move-counter">Moves: 0</p>
     <p id="difficulty-badge">Difficulty: Easy</p>
     <p id="piece-count">P1: 1  P2: 1  P3: 1  P4: 1</p>
+    <p id="total-pieces">Pieces remaining: 4</p>
     <div id="controls">
       <button id="reset-button" type="button">Reset</button>
       <button id="theme-toggle-button" type="button">Dark mode</button>
       <button id="mute-toggle-button" type="button">Mute</button>
+      <button id="fullscreen-toggle-button" type="button">Fullscreen</button>
+      <button id="flip-board-button" type="button">Flip Board</button>
     </div>
     <div id="app"></div>
     <section id="move-history">
@@ -79,6 +92,12 @@
         <button type="button" data-help-close>Close</button>
       </div>
     </div>
+    <footer id="credits">
+      <p>
+        Made with
+        <a href="https://github.com/hspycher/tilemap-io" target="_blank" rel="noopener noreferrer">tilemap-io</a>
+      </p>
+    </footer>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
