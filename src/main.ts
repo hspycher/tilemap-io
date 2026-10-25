@@ -130,6 +130,13 @@ class MainScene extends Phaser.Scene {
   private drawBoard(): void {
     this.boardGraphics?.destroy();
     const g = this.add.graphics();
+    // Pin the board to the back of the display list. Without this, calling
+    // drawBoard() again from applyTheme() re-adds the graphics object at the
+    // END of the display list (Phaser renders by add-order by default), so
+    // toggling the theme makes the board render ON TOP of the already-placed
+    // piece sprites -- in dark mode's near-black tile colors this makes the
+    // pieces look like they've disappeared.
+    g.setDepth(-1);
     const [darkTile, lightTile] = BOARD_COLORS[currentTheme];
     for (let row = 0; row < GRID_ROWS; row++) {
       for (let col = 0; col < GRID_COLS; col++) {
@@ -302,11 +309,18 @@ const fullscreenToggleButton = document.getElementById(
 );
 if (fullscreenToggleButton) {
   fullscreenToggleButton.addEventListener("click", () => {
-    const canvas = game.canvas;
-    if (!document.fullscreenElement) {
-      canvas.requestFullscreen?.();
+    // Use Phaser's own Scale Manager fullscreen API instead of calling
+    // canvas.requestFullscreen()/document.exitFullscreen() directly. Going
+    // through the raw DOM API bypasses Phaser's ScaleManager entirely, so it
+    // never recalculates the canvas's displayed-size-to-resolution ratio
+    // after the browser stretches the canvas to fill the screen -- pointer
+    // input then maps clicks using the stale pre-fullscreen scale factor,
+    // so clicks land on the wrong grid cell (or off-grid) and pieces become
+    // impossible to select/move while in fullscreen.
+    if (!game.scale.isFullscreen) {
+      game.scale.startFullscreen();
     } else {
-      document.exitFullscreen?.();
+      game.scale.stopFullscreen();
     }
   });
 }
