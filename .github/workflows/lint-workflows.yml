@@ -26,7 +26,7 @@ jobs:
     name: actionlint (generic syntax/shellcheck-class checks)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Run actionlint
         uses: docker://rhysd/actionlint:latest
         with:
@@ -36,6 +36,6 @@ jobs:
     name: Regression guard — no literal/fake auth tokens
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Fail on literal placeholder tokens in auth headers
         run: python3 .github/scripts/check_workflow_auth.py
