@@ -25,19 +25,22 @@ The `Status` single-select field drives the board columns, in workflow order:
 the `agent-ready` / `agent-working` / `agent-review` issue labels directly.
 Those labels are the source of truth the automation acts on today.
 
-This board is a **one-way snapshot/sync of that label state into a visual
-Kanban view** — it was populated once by querying open issues carrying those
-three labels and setting each item's `Status` field to match
-(`agent-ready` → Ready, `agent-working` → In Progress, `agent-review` → In
-Review). It is **not** bidirectionally synced: moving a card's Status column
-on the board does **not** change the issue's label, and relabeling an issue
-later does **not** automatically move its card.
+The board is kept in sync **one-way, label → board**, by a recurring Hermes
+cron job (`Kanban board sync`, `sync_kanban_board.py`, every 15 minutes,
+`no_agent` — cheap and mechanical, no LLM needed): for every open or
+recently-closed issue, it computes the "correct" Status from the issue's
+current labels/state and corrects the board if it's drifted
+(`agent-ready`→Ready, `agent-working`/`agent-stuck-N`→In Progress,
+`agent-review`→In Review, no agent label→Backlog, closed→Done), and adds
+any open issue missing from the board entirely.
 
-Keeping the board in sync with reality (either by re-running the same
-snapshot query periodically, or building an Actions workflow that reacts to
-label changes and updates the Status field automatically) is future work,
-tracked as a follow-up — it was deliberately scoped out of this initial pass
-to avoid shipping an untested bidirectional-sync integration.
+This is still **one-way only**: moving a card's Status column on the board
+does **not** change the issue's label, and the dispatcher never reads the
+board. The practical effect is the board now accurately reflects reality
+within 15 minutes of any label change, but it is a read-only view of the
+real state, not an alternate way to control it. Making the board the actual
+source of truth (dispatcher reads Status via GraphQL instead of labels)
+would be a bigger rewrite and isn't planned unless labels prove insufficient.
 
 ## How it was built
 
